@@ -1,0 +1,9 @@
+**/pnpm-lock.yaml
+.parcel-cache/
+.vscode/
+elm.json
+elm-tooling.json
+pnpm-lock.yaml
+dist
+elm-stuff/
+tailwind.config.js

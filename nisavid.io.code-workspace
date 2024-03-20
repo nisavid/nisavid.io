@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.css": "tailwindcss"
+		},
+		"tailwindCSS.files.exclude": [
+			"**/.git/**",
+			"**/node_modules/**",
+			"**/.hg/**",
+			"**/.svn/**",
+			"dist/**"
+		],
+		"css.customData": [
+			"tailwind.css-data.json"
+		]
+	}
+}

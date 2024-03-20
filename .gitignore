@@ -1,4 +1,11 @@
-# elm-package generated files
-elm-stuff
-# elm-repl generated files
-repl-temp-*
+**/*.log
+**/.DS_Store/
+**/.env*
+**/elm-stuff/
+**/node_modules/
+**/Session.vim
+.eslintcache
+.parcel-cache/
+dist/
+functions/lib/**/*.js
+functions/lib/**/*.js.map

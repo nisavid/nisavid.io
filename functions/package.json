@@ -1,0 +1,56 @@
+{
+  "name": "nisavid.io-functions",
+  "private": true,
+  "description": "Backend functions for nisavid.io",
+  "homepage": "https://nisavid.io",
+  "repository": "github:nisavid/nisavid.io",
+  "license": "Unlicense",
+  "author": {
+    "name": "Ivan D Vasin",
+    "email": "ivan@nisavid.io",
+    "url": "https://nisavid.io"
+  },
+  "type": "commonjs",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "check": "tsc --noEmit",
+    "predeploy": "pnpm run build",
+    "deploy": "firebase deploy --only functions",
+    "lint": "pnpm run lint:eslint",
+    "lint:eslint": "pnpm run lint:eslint: -- .",
+    "lint:eslint:": "eslint --cache",
+    "lint:fix:eslint": "pnpm run lint:fix:eslint: -- .",
+    "lint:fix:eslint:": "eslint --cache --fix",
+    "lint:fix:prettier": "pnpm run lint:fix:prettier: -- .",
+    "lint:fix:prettier:": "prettier --cache --write",
+    "lint:prettier": "pnpm run lint:prettier: -- .",
+    "lint:prettier:": "prettier --cache --check",
+    "logs": "firebase functions:log",
+    "release": "pnpm run deploy",
+    "start": "pnpm run start:serve",
+    "start:serve": "pnpm run build && firebase emulators:start --only functions",
+    "start:shell": "pnpm run build && firebase functions:shell"
+  },
+  "dependencies": {
+    "@google-cloud/functions-framework": "^3.3.0",
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^4.8.1",
+    "mailtrap": "^3.3.0",
+    "nodemailer": "^6.9.13"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^6.4.14",
+    "@typescript-eslint/eslint-plugin": "^7.3.1",
+    "@typescript-eslint/parser": "^7.3.1",
+    "eslint": "^8.57.0",
+    "eslint-config-google": "^0.14.0",
+    "eslint-plugin-import": "^2.29.1",
+    "firebase-functions-test": "^3.1.1",
+    "typescript": "^5.4.3"
+  },
+  "engines": {
+    "node": "20"
+  }
+}

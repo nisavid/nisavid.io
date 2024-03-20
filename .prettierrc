@@ -1,0 +1,11 @@
+{
+  "overrides": [
+    {
+      "files": ["(.|)*.{css,elm,html,{,c,m}js,json,md,yml}", ".{parcel,prettier}rc"],
+      "options": {
+        "proseWrap": "always"
+      }
+    }
+  ],
+  "plugins": ["prettier-plugin-elm", "prettier-plugin-tailwindcss"]
+}

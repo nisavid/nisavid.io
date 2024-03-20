@@ -1,0 +1,131 @@
+{
+  "private": true,
+  "description": "Website code and assets for nisavid.io",
+  "homepage": "https://nisavid.io",
+  "repository": "github:nisavid/nisavid.io",
+  "license": "Unlicense",
+  "author": {
+    "name": "Ivan D Vasin",
+    "email": "ivan@nisavid.io",
+    "url": "https://nisavid.io"
+  },
+  "type": "module",
+  "source": "src/index.html",
+  "scripts": {
+    "build": "pnpm run build:main",
+    "build:main": "parcel build --no-cache",
+    "check": "tsc --noEmit",
+    "clean": "rm --recursive --force elm-stuff .parcel-cache",
+    "clean-all": "pnpm run clean && pnpm run clean-all:dist",
+    "clean-all:dist": "rm --recursive --force dist",
+    "predeploy": "pnpm run build",
+    "deploy": "firebase deploy",
+    "postinstall": "elm-tooling install",
+    "lint": "pnpm run lint:elm-format && pnpm run lint:eslint",
+    "lint:elm-format": "pnpm run lint:elm-format: -- src/{,**/}*.elm",
+    "lint:elm-format:": "elm-format --validate",
+    "lint:eslint": "pnpm run lint:eslint: -- .",
+    "lint:eslint:": "eslint --cache",
+    "lint:fix": "pnpm run lint:fix:elm-format && pnpm run lint:fix:eslint",
+    "lint:fix:elm-format": "pnpm run lint:fix:elm-format: -- src/***.elm",
+    "lint:fix:elm-format:": "elm-format",
+    "lint:fix:eslint": "pnpm run lint:fix:eslint: -- .",
+    "lint:fix:eslint:": "eslint --cache --fix",
+    "lint:fix:prettier": "pnpm run lint:fix:prettier: -- .",
+    "lint:fix:prettier:": "prettier --cache --write",
+    "lint:prettier": "pnpm run lint:prettier: -- .",
+    "lint:prettier:": "prettier --cache --check",
+    "prepare": "husky",
+    "release": "pnpm run deploy",
+    "start": "pnpm run start:parcel-serve:watch",
+    "start:doc": "pnpm run start:doc:watch",
+    "start:doc:watch": "elm-doc-preview",
+    "start:parcel-serve": "pnpm run start:parcel-serve:watch",
+    "start:parcel-serve:watch": "parcel serve",
+    "test": "pnpm run test:elm",
+    "test:e2e": "cypress run",
+    "test:e2e:open": "cypress open",
+    "test:elm": "elm-test",
+    "test:elm:watch": "elm-test --watch"
+  },
+  "lint-staged": {
+    "src/{,**/}*.elm": "pnpm run lint:elm-format: --",
+    "{,**/}.*.{cjs,css,html,js,json,json5,jsonc,jsx,mjs,ts,tsx},.{parcel,prettier}rc": "pnpm run lint:eslint: --"
+  },
+  "browserslist": [
+    "current node, > 0.5%, > 0.2% in US, last 2 versions, Firefox ESR, not dead"
+  ],
+  "dependencies": {
+    "firebase": "^10.9.0"
+  },
+  "devDependencies": {
+    "@catppuccin/tailwindcss": "^0.1.6",
+    "@eslint/eslintrc": "^3.0.2",
+    "@eslint/js": "^8.57.0",
+    "@html-eslint/eslint-plugin": "^0.24.0",
+    "@html-eslint/parser": "^0.24.0",
+    "@parcel/config-default": "^2.12.0",
+    "@parcel/packager-raw-url": "^2.12.0",
+    "@parcel/resolver-glob": "^2.12.0",
+    "@parcel/transformer-elm": "^2.12.0",
+    "@parcel/transformer-jsonld": "^2.12.0",
+    "@tailwindcss/container-queries": "^0.1.1",
+    "@tailwindcss/forms": "^0.5.7",
+    "@tailwindcss/typography": "^0.5.10",
+    "@types/node": "^20.11.30",
+    "@types/webpack-env": "^1.18.4",
+    "@typescript-eslint/eslint-plugin": "^7.3.1",
+    "@typescript-eslint/parser": "^7.3.1",
+    "elm": "0.19.1-6",
+    "elm-tooling": "^1.15.1",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-editorconfig": "^4.0.3",
+    "eslint-plugin-html": "^8.0.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-jsdoc": "^48.2.1",
+    "eslint-plugin-json-schema-validator": "^4.9.0",
+    "eslint-plugin-jsonc": "^2.14.1",
+    "eslint-plugin-markdown": "^4.0.1",
+    "eslint-plugin-no-secrets": "^0.8.9",
+    "eslint-plugin-prettier": "^5.1.3",
+    "eslint-plugin-tsdoc": "^0.2.17",
+    "firebase-tools": "^13.5.2",
+    "globals": "^14.0.0",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "parcel": "^2.12.0",
+    "postcss": "^8.4.37",
+    "postcss-custom-properties": "^13.3.6",
+    "postcss-import": "^16.0.1",
+    "postcss-url": "^10.1.3",
+    "prettier": "^3.2.5",
+    "prettier-plugin-elm": "^0.11.0",
+    "prettier-plugin-tailwindcss": "^0.5.12",
+    "process": "^0.11.10",
+    "svgo": "^3.2.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.4.2",
+    "web-vitals": "^3.5.2"
+  },
+  "@parcel/transformer-css": {
+    "drafts": {
+      "customMedia": true,
+      "nesting": true
+    }
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "svgo": "2.8.0"
+      }
+    }
+  },
+  "targets": {
+    "default": {
+      "distDir": "dist",
+      "context": "browser",
+      "outputFormat": "esmodule"
+    }
+  }
+}

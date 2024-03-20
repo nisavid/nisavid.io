@@ -1,0 +1,26 @@
+{
+  "name": "nisavid/nisavid-io",
+  "summary": "Elm website code for nisavid.io",
+  "exposed-modules": [
+    "Device",
+    "Effect",
+    "Env",
+    "Interop",
+    "Interop.Ports",
+    "Main",
+    "Page",
+    "Page.About",
+    "Page.Blank",
+    "Page.Contact",
+    "Page.Home",
+    "Page.NotFound",
+    "Page.Projects",
+    "Route",
+    "Session",
+    "Settings",
+    "Theme",
+    "Validation",
+    "Validation.Interop",
+    "View"
+  ]
+}
