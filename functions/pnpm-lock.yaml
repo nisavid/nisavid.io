@@ -16,15 +16,9 @@ dependencies:
     version: 4.8.1(firebase-admin@12.0.0)
   mailtrap:
     specifier: ^3.3.0
-    version: 3.3.0(@types/nodemailer@6.4.14)(nodemailer@6.9.13)
-  nodemailer:
-    specifier: ^6.9.13
-    version: 6.9.13
+    version: 3.3.0
 
 devDependencies:
-  '@types/nodemailer':
-    specifier: ^6.4.14
-    version: 6.4.14
   '@typescript-eslint/eslint-plugin':
     specifier: ^7.3.1
     version: 7.3.1(@typescript-eslint/parser@7.3.1)(eslint@8.57.0)(typescript@5.4.3)
@@ -1084,11 +1078,6 @@ packages:
     resolution: {integrity: sha512-dHM6ZxwlmuZaRmUPfv1p+KrdD1Dci04FbdEm/9wEMouFqxYoFl5aMkt0VMAUtYRQDyYvD41WJLukhq/ha3YuTw==}
     dependencies:
       undici-types: 5.26.5
-
-  /@types/nodemailer@6.4.14:
-    resolution: {integrity: sha512-fUWthHO9k9DSdPCSPRqcu6TWhYyxTBg382vlNIttSe9M7XfsT06y0f24KHXtbnijPGGRIcVvdKHTNikOI6qiHA==}
-    dependencies:
-      '@types/node': 20.11.30
 
   /@types/normalize-package-data@2.4.4:
     resolution: {integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==}
@@ -3893,7 +3882,7 @@ packages:
       lodash.clonedeep: 4.5.0
       lru-cache: 4.0.2
 
-  /mailtrap@3.3.0(@types/nodemailer@6.4.14)(nodemailer@6.9.13):
+  /mailtrap@3.3.0:
     resolution: {integrity: sha512-lFk7Cuv+qccAGMc9EMPwQiHp2+zG5wPorWdDn29NiLCA0YwYLEtPAKz/EvkLue3kcRA2KukgLOSwEbzL/Fj7Xw==}
     engines: {node: '>=16.20.1', yarn: '>=1.22.17'}
     peerDependencies:
@@ -3905,9 +3894,7 @@ packages:
       nodemailer:
         optional: true
     dependencies:
-      '@types/nodemailer': 6.4.14
       axios: 1.6.8
-      nodemailer: 6.9.13
     transitivePeerDependencies:
       - debug
     dev: false
@@ -4036,11 +4023,6 @@ packages:
   /node-releases@2.0.14:
     resolution: {integrity: sha512-y10wOWt8yZpqXmOgRo77WaHEmhYQYGNA6y421PKsKYWEK8aW+cqAphborZDhqfyKrbZEN92CN1X2KbafY2s7Yw==}
     dev: true
-
-  /nodemailer@6.9.13:
-    resolution: {integrity: sha512-7o38Yogx6krdoBf3jCAqnIN4oSQFx+fMa0I7dK1D+me9kBxx12D+/33wSb+fhOCtIxvYJ+4x4IMEhmhCKfAiOA==}
-    engines: {node: '>=6.0.0'}
-    dev: false
 
   /normalize-package-data@2.5.0:
     resolution: {integrity: sha512-/5CMN3T0R4XTj4DcGaexo+roZSdSFW/0AOOTROrjxzCG1wrWXEsGbRKevjlIL+ZDE4sZlJr5ED4YW0yqmkK+eA==}
@@ -5132,7 +5114,6 @@ packages:
 
 time:
   /@google-cloud/functions-framework@3.3.0: '2023-07-05T22:49:57.059Z'
-  /@types/nodemailer@6.4.14: '2023-11-07T20:28:58.204Z'
   /@typescript-eslint/eslint-plugin@7.3.1: '2024-03-18T23:02:08.045Z'
   /@typescript-eslint/parser@7.3.1: '2024-03-18T23:01:18.256Z'
   /eslint-config-google@0.14.0: '2019-09-02T19:10:47.693Z'
@@ -5142,5 +5123,4 @@ time:
   /firebase-functions-test@3.1.1: '2024-01-20T02:22:16.204Z'
   /firebase-functions@4.8.1: '2024-03-19T18:05:53.846Z'
   /mailtrap@3.3.0: '2024-01-31T11:25:45.853Z'
-  /nodemailer@6.9.13: '2024-03-20T10:13:05.631Z'
   /typescript@5.4.3: '2024-03-20T19:30:57.636Z'
