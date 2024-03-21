@@ -12,7 +12,7 @@
   "type": "module",
   "source": "src/index.html",
   "scripts": {
-    "build": "pnpm run build:main",
+    "build": "pnpm run clean-all:dist && pnpm run build:main",
     "build:main": "parcel build --no-cache",
     "check": "tsc --noEmit",
     "clean": "rm --recursive --force elm-stuff .parcel-cache",
