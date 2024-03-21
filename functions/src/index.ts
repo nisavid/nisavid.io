@@ -60,11 +60,11 @@ export const sendContactFormEmail = onCall(
     // it apparently treats the `From` identity as the sender
     // even if a `Sender` is explicitly specified.
     //
-    // Therefore, contrary to the standard, we set the `from` address
+    // Therefore, contrary to the standard, we set the `From` address
     // to the sender's address (because Mailtrap demands it) and omit
-    // the `sender` altogether (because Mailtrap ignores it).  In order
+    // the `Sender` altogether (because Mailtrap ignores it).  In order
     // to ensure that replies are addressed to the author rather than
-    // to the sender, we include the author's name and address in `replyTo`.
+    // to the sender, we include the author's name and address in `Reply-To`.
     const message: Mail = {
       from: { name: request.data.name, email: sender.value() },
       to: [{ email: to.value() }],
