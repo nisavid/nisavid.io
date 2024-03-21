@@ -118,6 +118,9 @@ devDependencies:
   parcel:
     specifier: ^2.12.0
     version: 2.12.0(postcss@8.4.38)(typescript@5.4.3)
+  parcel-reporter-static-files-copy:
+    specifier: ^1.5.3
+    version: 1.5.3(@parcel/core@2.12.0)
   postcss:
     specifier: ^8.4.38
     version: 8.4.38
@@ -1327,7 +1330,7 @@ packages:
       '@parcel/fs': 2.12.0(@parcel/core@2.12.0)
       '@parcel/graph': 3.2.0
       '@parcel/logger': 2.12.0
-      '@parcel/package-manager': 2.12.0(@parcel/core@2.12.0)
+      '@parcel/package-manager': 2.12.0(@parcel/core@2.12.0)(@swc/helpers@0.5.7)
       '@parcel/plugin': 2.12.0(@parcel/core@2.12.0)
       '@parcel/profiler': 2.12.0
       '@parcel/rust': 2.12.0
@@ -1502,14 +1505,14 @@ packages:
       '@parcel/plugin': 2.12.0(@parcel/core@2.12.0)
       '@parcel/source-map': 2.1.1
       '@parcel/utils': 2.12.0
-      '@swc/core': 1.4.8
+      '@swc/core': 1.4.8(@swc/helpers@0.5.7)
       nullthrows: 1.1.1
     transitivePeerDependencies:
       - '@parcel/core'
       - '@swc/helpers'
     dev: true
 
-  /@parcel/package-manager@2.12.0(@parcel/core@2.12.0):
+  /@parcel/package-manager@2.12.0(@parcel/core@2.12.0)(@swc/helpers@0.5.7):
     resolution: {integrity: sha512-0nvAezcjPx9FT+hIL+LS1jb0aohwLZXct7jAh7i0MLMtehOi0z1Sau+QpgMlA9rfEZZ1LIeFdnZZwqSy7Ccspw==}
     engines: {node: '>= 12.0.0'}
     peerDependencies:
@@ -1523,7 +1526,7 @@ packages:
       '@parcel/types': 2.12.0(@parcel/core@2.12.0)
       '@parcel/utils': 2.12.0
       '@parcel/workers': 2.12.0(@parcel/core@2.12.0)
-      '@swc/core': 1.4.8
+      '@swc/core': 1.4.8(@swc/helpers@0.5.7)
       semver: 7.6.0
     transitivePeerDependencies:
       - '@swc/helpers'
@@ -1969,7 +1972,7 @@ packages:
       '@parcel/cache': 2.12.0(@parcel/core@2.12.0)
       '@parcel/diagnostic': 2.12.0
       '@parcel/fs': 2.12.0(@parcel/core@2.12.0)
-      '@parcel/package-manager': 2.12.0(@parcel/core@2.12.0)
+      '@parcel/package-manager': 2.12.0(@parcel/core@2.12.0)(@swc/helpers@0.5.7)
       '@parcel/source-map': 2.1.1
       '@parcel/workers': 2.12.0(@parcel/core@2.12.0)
       utility-types: 3.11.0
@@ -2294,7 +2297,7 @@ packages:
     dev: true
     optional: true
 
-  /@swc/core@1.4.8:
+  /@swc/core@1.4.8(@swc/helpers@0.5.7):
     resolution: {integrity: sha512-uY2RSJcFPgNOEg12RQZL197LZX+MunGiKxsbxmh22VfVxrOYGRvh4mPANFlrD1yb38CgmW1wI6YgIi8LkIwmWg==}
     engines: {node: '>=10'}
     requiresBuild: true
@@ -2305,6 +2308,7 @@ packages:
         optional: true
     dependencies:
       '@swc/counter': 0.1.3
+      '@swc/helpers': 0.5.7
       '@swc/types': 0.1.6
     optionalDependencies:
       '@swc/core-darwin-arm64': 1.4.8
@@ -7328,6 +7332,16 @@ packages:
       netmask: 2.0.2
     dev: true
 
+  /parcel-reporter-static-files-copy@1.5.3(@parcel/core@2.12.0):
+    resolution: {integrity: sha512-Ukq2SyJYn3GFIPCLamXuQ+2t+0j54llujjOUoRjtmVvfsuGnJDEpMznADeIoKuQDvy0jpxtWzWkQvxqI/j+U4A==}
+    engines: {parcel: ^2.0.0-beta.1}
+    dependencies:
+      '@parcel/plugin': 2.12.0(@parcel/core@2.12.0)
+    transitivePeerDependencies:
+      - '@parcel/core'
+      - '@swc/helpers'
+    dev: true
+
   /parcel@2.12.0(postcss@8.4.38)(typescript@5.4.3):
     resolution: {integrity: sha512-W+gxAq7aQ9dJIg/XLKGcRT0cvnStFAQHPaI0pvD0U2l6IVLueUAm3nwN7lkY62zZNmlvNx6jNtE4wlbS+CyqSg==}
     engines: {node: '>= 12.0.0'}
@@ -7339,7 +7353,7 @@ packages:
       '@parcel/events': 2.12.0
       '@parcel/fs': 2.12.0(@parcel/core@2.12.0)
       '@parcel/logger': 2.12.0
-      '@parcel/package-manager': 2.12.0(@parcel/core@2.12.0)
+      '@parcel/package-manager': 2.12.0(@parcel/core@2.12.0)(@swc/helpers@0.5.7)
       '@parcel/reporter-cli': 2.12.0(@parcel/core@2.12.0)
       '@parcel/reporter-dev-server': 2.12.0(@parcel/core@2.12.0)
       '@parcel/reporter-tracer': 2.12.0(@parcel/core@2.12.0)
@@ -9440,6 +9454,7 @@ time:
   /globals@14.0.0: '2024-02-10T15:40:47.985Z'
   /husky@9.0.11: '2024-02-13T23:01:43.987Z'
   /lint-staged@15.2.2: '2024-02-05T14:26:18.747Z'
+  /parcel-reporter-static-files-copy@1.5.3: '2023-09-20T18:58:44.373Z'
   /parcel@2.12.0: '2024-02-28T16:53:59.662Z'
   /postcss-custom-properties@13.3.6: '2024-03-13T18:57:30.495Z'
   /postcss-import@16.1.0: '2024-03-20T20:31:03.528Z'
