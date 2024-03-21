@@ -1468,7 +1468,7 @@ form.contact {
     }
 
     textarea[name="body"] {
-      @apply w-full;
+      @apply w-full h-[12cap];
     }
   }
 

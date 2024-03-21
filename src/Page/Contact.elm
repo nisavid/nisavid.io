@@ -61,7 +61,6 @@ import Html.Attributes
         , id
         , name
         , placeholder
-        , rows
         , spellcheck
         , type_
         , value
@@ -627,7 +626,6 @@ viewFormField field model =
              , value <| fieldModel.value
              , attributeIf shouldDisable <| disabled True
              , attributeIf (field == Name) <| autofocus True
-             , attributeIf (field == Body) <| rows 6
              ]
                 ++ ariaAttrs
                 ++ formFieldConstraintAttrs field
