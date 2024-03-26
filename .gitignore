@@ -5,6 +5,7 @@
 **/node_modules/
 **/Session.vim
 .eslintcache
+.firebase/*.cache
 .parcel-cache/
 dist/
 functions/lib/**/*.js
