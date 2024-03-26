@@ -1,0 +1,5 @@
+[git_hooks.commit-msg]
+path = ".cog/commit-msg.sh"
+
+[git_hooks.pre-push]
+path = ".cog/pre-push.sh"
