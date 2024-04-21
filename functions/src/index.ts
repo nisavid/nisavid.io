@@ -20,7 +20,7 @@ const to = Params.defineString("TO");
  */
 export const sendContactFormEmail = onCall(
   {
-    cors: ["nisavid.io"],
+    cors: true,
     enforceAppCheck: true,
     consumeAppCheckToken: true,
     secrets: [mailtrapToken],
