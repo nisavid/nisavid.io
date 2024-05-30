@@ -68,7 +68,7 @@
       @apply relative;
       @apply top-[-0.0625cap];
       @apply text-lg/none;
-      @apply [font-variation-settings:_"opsz"_18];
+      font-variation-settings: "opsz" 18;
     }
 
     & > .label {
@@ -415,62 +415,76 @@
 
   --main-px: 1rem;
   --main-py: 0.75rem;
-  @media (width >= 375px) {
+
+  @media (width >=375px) {
     --main-px: 1.5rem;
   }
-  @media (width >= 640px) {
+
+  @media (width >=640px) {
     --main-px: 2rem;
     --main-py: 1rem;
   }
-  @media (width >= 768px) {
+
+  @media (width >=768px) {
     --main-px: 3rem;
     --main-py: 1.5rem;
   }
-  @media (width >= 1024px) {
+
+  @media (width >=1024px) {
     --main-px: 4rem;
     --main-py: 2rem;
   }
-  @media (width >= 1280px) {
+
+  @media (width >=1280px) {
     --main-px: 5rem;
     --main-py: 2.5rem;
   }
-  @media (width >= 1536px) {
+
+  @media (width >=1536px) {
     --main-px: 6rem;
     --main-py: 3rem;
   }
 
   --main-p-mx: 0.5rem;
   --main-p-my: 1rem;
-  @media (width >= 375px) {
+
+  @media (width >=375px) {
     --main-p-mx: 1rem;
   }
-  @media (width >= 768px) {
+
+  @media (width >=768px) {
     --main-p-mx: 1.5rem;
   }
-  @media (width >= 1024px) {
+
+  @media (width >=1024px) {
     --main-p-mx: 2rem;
   }
-  @media (width >= 1280px) {
+
+  @media (width >=1280px) {
     --main-p-mx: 2.5rem;
   }
-  @media (width >= 1536px) {
+
+  @media (width >=1536px) {
     --main-p-mx: 3rem;
   }
 
   --page-header-height: 2rem;
   --page-header-mx: 1.5rem;
   --page-header-my: 0.75rem;
-  @media (width >= 1024px) {
+
+  @media (width >=1024px) {
     --page-header-height: 2.5rem;
     --page-header-mx: 2rem;
     --page-header-my: 1rem;
   }
-  @media (width >= 1280px) {
+
+  @media (width >=1280px) {
     --page-header-height: 2.75rem;
     --page-header-mx: 2.5rem;
     --page-header-my: 1.25rem;
   }
-  @media (width >= 1536px) {
+
+  @media (width >=1536px) {
     --page-header-height: 3rem;
     --page-header-mx: 3rem;
     --page-header-my: 1.5rem;
@@ -568,7 +582,7 @@
     }
   }
 
-  @media (width >= 640px) {
+  @media (width >=640px) {
     right: unset;
     @apply z-10;
     @apply w-full;
@@ -622,8 +636,24 @@
       .material-symbols-outlined {
         @apply static;
         @apply text-[24px] lg:text-[30px] xl:text-[32px] 2xl:text-[36px];
-        @apply [font-variation-settings:_"opsz"_24] lg:[font-variation-settings:_"opsz"_30] xl:[font-variation-settings:_"opsz"_32] 2xl:[font-variation-settings:_"opsz"_36];
         @apply text-cat-subtext0;
+
+        /* NOTE: This is the desired rule, but it gets mangled by auto-formatting */
+        /*@apply [font-variation-settings:_"opsz"_24] lg:[font-variation-settings:_"opsz"_30] xl:[font-variation-settings:_"opsz"_32] 2xl:[font-variation-settings:_"opsz"_36];*/
+        /* XXX: Use this for now until there's a fix or a clean workaround */
+        font-variation-settings: "opsz" 24;
+
+        @media (width >=1024px) {
+          font-variation-settings: "opsz" 30;
+        }
+
+        @media (width >=1280px) {
+          font-variation-settings: "opsz" 32;
+        }
+
+        @media (width >=1536px) {
+          font-variation-settings: "opsz" 36;
+        }
       }
 
       &:hover > .highlight {
@@ -831,7 +861,7 @@
     }
   }
 
-  @media (width >= 640px) {
+  @media (width >=640px) {
     @apply static;
     @apply w-fit;
     @apply text-sm lg:text-base 2xl:text-lg;
@@ -999,8 +1029,24 @@
       .material-symbols-outlined {
         @apply static;
         @apply text-[24px] lg:text-[30px] xl:text-[32px] 2xl:text-[36px];
-        @apply [font-variation-settings:_"opsz"_24] lg:[font-variation-settings:_"opsz"_30] xl:[font-variation-settings:_"opsz"_32] 2xl:[font-variation-settings:_"opsz"_36];
         @apply text-cat-subtext0;
+
+        /* NOTE: This is the desired rule, but it gets mangled by auto-formatting */
+        /*@apply [font-variation-settings:_"opsz"_24] lg:[font-variation-settings:_"opsz"_30] xl:[font-variation-settings:_"opsz"_32] 2xl:[font-variation-settings:_"opsz"_36];*/
+        /* XXX: Use this for now until there's a fix or a clean workaround */
+        font-variation-settings: "opsz" 24;
+
+        @media (width >=1024px) {
+          font-variation-settings: "opsz" 30;
+        }
+
+        @media (width >=1280px) {
+          font-variation-settings: "opsz" 32;
+        }
+
+        @media (width >=1536px) {
+          font-variation-settings: "opsz" 36;
+        }
       }
 
       &:hover > .highlight {
@@ -1181,7 +1227,7 @@
               @apply relative;
               @apply top-[0.125cap];
               @apply text-sm/none;
-              @apply [font-variation-settings:_"opsz"_14];
+              font-variation-settings: "opsz" 14;
             }
 
             .label {
@@ -1432,7 +1478,9 @@ form {
         @apply relative;
         @apply top-[0.2cap];
         @apply text-[18px]/none;
-        @apply [font-variation-settings:_"FILL"_1,_"opsz"_18];
+        font-variation-settings:
+          "FILL" 1,
+          "opsz" 18;
       }
 
       & > ul {
@@ -1466,7 +1514,9 @@ form {
     & > .material-symbols-outlined {
       @apply text-3xl;
       @apply text-[30px];
-      @apply [font-variation-settings:_"FILL"_1,_"opsz"_30];
+      font-variation-settings:
+        "FILL" 1,
+        "opsz" 30;
     }
 
     &.submitting {
@@ -1499,7 +1549,7 @@ form.contact {
     }
 
     textarea[name="body"] {
-      @apply w-full h-[12cap];
+      @apply h-[12cap] w-full;
     }
   }
 
