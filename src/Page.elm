@@ -408,6 +408,7 @@ wrapDocument model env session page { title, body } =
           <|
             viewHeader model session page
                 ++ wrapMainContent body
+                ++ View.footer
         ]
     }
 

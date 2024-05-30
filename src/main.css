@@ -265,6 +265,11 @@
 }
 
 @layer components {
+  .fa-icon > svg {
+    @apply fill-current stroke-current;
+    @apply h-6 w-6;
+  }
+
   .material-symbols-outlined {
     font-variant-caps: normal;
     font-variation-settings:
@@ -478,6 +483,7 @@
   @apply h-full min-h-screen w-full;
   @apply bg-cat-crust selection:bg-cat-surface2/50;
   @apply pt-[calc(var(--page-header-height)_+_2_*_var(--page-header-my))];
+  @apply flex flex-col;
   @apply accent-cat-sapphire;
   @apply text-cat-text;
   @apply font-serif;
@@ -1334,6 +1340,31 @@ main {
 
   p {
     @apply text-pretty sm:text-justify;
+  }
+}
+
+.page > .footer-spacer {
+  @apply flex-grow;
+}
+
+.page > footer {
+  @apply w-full;
+  @apply mb-1 sm:mb-2 md:mb-4 lg:mb-4 xl:mb-5 2xl:mb-6;
+  @apply flex items-center justify-center;
+
+  .fa-icon > svg {
+    @apply h-[24px] w-[24px] lg:h-[30px] lg:w-[30px] xl:h-[32px] xl:w-[32px] 2xl:h-[36px] 2xl:w-[36px];
+    @apply fill-cat-subtext0 stroke-cat-subtext0;
+    @apply transition-all-colors duration-300;
+
+    &:hover {
+      @apply fill-cat-sapphire stroke-cat-sapphire;
+    }
+
+    &:active {
+      @apply fill-cat-sky stroke-cat-sky;
+      @apply duration-75;
+    }
   }
 }
 

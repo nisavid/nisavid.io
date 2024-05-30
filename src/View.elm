@@ -2,6 +2,7 @@ module View exposing
     ( RootConfig, root
     , MenuConfig, ThemeSwitcherConfig, header, menuItem, themeSwitcherOptionId
     , main_
+    , footer
     )
 
 {-| View helpers.
@@ -21,10 +22,16 @@ module View exposing
 
 @docs main_
 
+
+# Page Footer
+
+@docs footer
+
 -}
 
 import Array exposing (Array)
 import Device
+import FontAwesome.Brands as FABrands
 import Html
     exposing
         ( Html
@@ -462,3 +469,51 @@ themeSwitcherOptionId theme =
 main_ : List (Html msg) -> List (Html msg)
 main_ content =
     [ div [ class "main-wrapper" ] [ Html.main_ [ id "main" ] content ] ]
+
+
+footer : List (Html never)
+footer =
+    [ div [ class "footer-spacer" ] []
+    , Html.footer []
+        [ button [ class "footer-button" ]
+            [ a
+                [ href "https://github.com/nisavid"
+                , ariaDescribedby "footer-ghprofile-tooltip"
+                ]
+                [ span [ class "fa-icon" ] [ FABrands.squareGithub [] ] ]
+            , div [ id "footer-ghprofile-tooltip", role "tooltip", class "tooltip" ]
+                [ text "GitHub profile" ]
+            , div [ class "tooltip-caret" ] []
+            ]
+        , button [ class "footer-button" ]
+            [ a
+                [ href "https://linkedin.com/in/nisavid"
+                , ariaDescribedby "footer-liprofile-tooltip"
+                ]
+                [ span [ class "fa-icon" ] [ FABrands.linkedin [] ] ]
+            , div [ id "footer-liprofile-tooltip", role "tooltip", class "tooltip" ]
+                [ text "LinkedIn profile" ]
+            , div [ class "tooltip-caret" ] []
+            ]
+        , button [ class "footer-button" ]
+            [ a
+                [ href "https://facebook.com/nisavid"
+                , ariaDescribedby "footer-fbprofile-tooltip"
+                ]
+                [ span [ class "fa-icon" ] [ FABrands.squareFacebook [] ] ]
+            , div [ id "footer-fbprofile-tooltip", role "tooltip", class "tooltip" ]
+                [ text "Facebook profile" ]
+            , div [ class "tooltip-caret" ] []
+            ]
+        , button [ class "footer-button" ]
+            [ a
+                [ href "https://x.com/nisavid"
+                , ariaDescribedby "footer-xprofile-tooltip"
+                ]
+                [ span [ class "fa-icon" ] [ FABrands.squareXTwitter [] ] ]
+            , div [ id "footer-xprofile-tooltip", role "tooltip", class "tooltip" ]
+                [ text "X profile" ]
+            , div [ class "tooltip-caret" ] []
+            ]
+        ]
+    ]
