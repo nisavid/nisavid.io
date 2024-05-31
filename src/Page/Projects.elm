@@ -61,5 +61,56 @@ view =
                 , text "."
                 ]
             ]
+        , article []
+            [ h2 [] [ text "astronvim-config" ]
+            , p []
+                [ text "My "
+                , a [ rel "external", href "https://neovim.io" ]
+                    [ text "Neovim" ]
+                , text " configuration, based on "
+                , a [ rel "external", href "https://astronvim.com" ]
+                    [ text "AstroNvim" ]
+                , text ", integrating the productivity of modern IDE features into the efficiency of modal editing."
+                ]
+            , p []
+                [ text "The source code is available "
+                , a [ rel "external", href "https://github.com/nisavid/astronvim-config" ]
+                    [ text "on GitHub" ]
+                , text "."
+                ]
+            ]
+        , article []
+            [ h2 [] [ text "zsh-config" ]
+            , p []
+                [ text "My "
+                , a [ rel "external", href "https://zsh.sourceforge.io" ]
+                    [ text "Zsh" ]
+                , text " configuration.  Fast, convenient, and pretty."
+                ]
+            , p []
+                [ text "The source code is available "
+                , a [ rel "external", href "https://github.com/nisavid/zsh-config" ]
+                    [ text "on GitHub" ]
+                , text "."
+                ]
+            ]
+        , article []
+            [ h2 [] [ text "dotfiles" ]
+            , p []
+                [ text "My "
+                , a [ rel "external", href "https://dotfiles.github.io" ]
+                    [ text "dotfiles" ]
+                , text ", managed by "
+                , a [ rel "external", href "https://chezmoi.io" ]
+                    [ text "chezmoi" ]
+                , text "."
+                ]
+            , p []
+                [ text "The source code is available "
+                , a [ rel "external", href "https://github.com/nisavid/dotfiles" ]
+                    [ text "on GitHub" ]
+                , text "."
+                ]
+            ]
         ]
     }
