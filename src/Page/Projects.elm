@@ -52,7 +52,10 @@ view =
                 , text " for web hosting and "
                 , a [ rel "external", href "https://firebase.google.com/docs/functions" ]
                     [ text "Cloud Functions" ]
-                , text " for serverless backend functionality.  The source code is available "
+                , text " for serverless backend functionality."
+                ]
+            , p []
+                [ text "The source code is available "
                 , a [ rel "external", href "https://github.com/nisavid/nisavid.io" ]
                     [ text "on GitHub" ]
                 , text "."
