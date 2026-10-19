@@ -274,10 +274,10 @@ and
 In `nisavid/nisavid.io`:
 
 1. Under **Settings → Actions → General**, enable Actions and allow the pinned
-   `actions/checkout`, `actions/setup-node`, `pnpm/action-setup`, and
-   `google-github-actions/auth` actions used by the workflow. Keep the default
-   `GITHUB_TOKEN` permissions read-only; the deployment job explicitly requests
-   `id-token: write` for OIDC.
+   `actions/checkout`, `actions/setup-node`, `actions/setup-java`,
+   `pnpm/action-setup`, and `google-github-actions/auth` actions used by the
+   workflow. Keep the default `GITHUB_TOKEN` permissions read-only; the
+   deployment job explicitly requests `id-token: write` for OIDC.
 2. Under **Settings → Environments**, create **`firebase-production`**. Restrict
    deployment branches to the selected branch **`main`**, with no tag rule. Omit
    required deployment reviewers and wait timers if every accepted merge should
@@ -361,6 +361,80 @@ Check token. Do not configure production service-account keys, deployer
 impersonation, Firebase login tokens, `MAILTRAP_PASS`, or production cloud
 access in Security Cloud. Its role is to validate patches; GitHub's protected
 deployment job handles production.
+
+### Firestore emulator prerequisites
+
+The rate-limit fix adds `functions`' `test:emulator` script. When it is present,
+the required **Validate Firebase build** job also runs its real Firestore
+transaction and client-rule tests against `demo-contact-rate-limit`. It selects
+Temurin Java 21 and needs no production credentials. A failing emulator test
+fails validation even while production deployment remains disabled.
+
+The reported Codex setup above predates these tests. For execution in Codex
+Security Cloud, additionally select Java 21 or newer and record `java --version`
+with the validation results. Do not assume the Universal image or a successful
+static scan establishes the installed Java version. Firebase CLI 15.34.0 rejects
+Java versions below 21.
+
+For Linux x86-64, the following optional setup installs the verified Temurin
+21.0.12.1+1 JRE archive. Append it to both setup and maintenance scripts if the
+environment does not already supply a compatible Java runtime:
+
+```bash
+set -euo pipefail
+case "$(uname -s):$(uname -m)" in
+  Linux:x86_64) ;;
+  *) echo 'This Java archive requires Linux x86-64.' >&2; exit 1 ;;
+esac
+
+CONTACT_JAVA_DIR="$HOME/.cache/nisavid-temurin21"
+CONTACT_JAVA_ARCHIVE="$CONTACT_JAVA_DIR/temurin21-jre.tar.gz"
+mkdir -p "$CONTACT_JAVA_DIR"
+curl --fail --location \
+  'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jre_x64_linux_hotspot_21.0.12.1_1.tar.gz' \
+  --output "$CONTACT_JAVA_ARCHIVE"
+printf '%s  %s\n' \
+  '2413149700df0f7d440500a84a8f764c535f21e5a5e87d38328b64eec2c5b500' \
+  "$CONTACT_JAVA_ARCHIVE" | sha256sum --check
+tar --extract --gzip --no-same-owner \
+  --file "$CONTACT_JAVA_ARCHIVE" --directory "$CONTACT_JAVA_DIR"
+export JAVA_HOME="$CONTACT_JAVA_DIR/jdk-21.0.12.1+1-jre"
+export PATH="$JAVA_HOME/bin:$PATH"
+java --version
+```
+
+The checksum is published beside the archive as `.sha256.txt`. Keep the version,
+archive, and checksum in sync when deliberately updating Java. The download uses
+`github.com` and `release-assets.githubusercontent.com`, already in the reported
+allowlist. Select the installed runtime in every validation shell as well;
+exports made during setup must not be assumed to persist into later agent
+shells:
+
+```bash
+export JAVA_HOME="$HOME/.cache/nisavid-temurin21/jdk-21.0.12.1+1-jre"
+export PATH="$JAVA_HOME/bin:$PATH"
+java --version
+```
+
+Add `storage.googleapis.com` to the Codex custom domain allowlist for the
+Firestore emulator download, or pre-cache the emulator matching the pinned
+Firebase CLI during setup. CLI 15.34.0 uses Firestore emulator 1.22.0 and
+verifies its bundled checksum. After installing dependencies,
+`pnpm exec firebase setup:emulators:firestore` populates the emulator cache.
+Neither the JRE download nor the emulator requires production cloud access or
+secret values.
+
+Once the rate-limit tests are present, include this command in the complete
+validation sequence from the repository root:
+
+```bash
+pnpm exec firebase emulators:exec --only firestore --project demo-contact-rate-limit --non-interactive 'pnpm --dir functions run test:emulator'
+```
+
+The tests refuse to run without a loopback emulator and the exact demo project.
+Retain the Java version, commit SHA, and emulator test exit result as execution
+evidence; the operator handoff does not establish that these additions ran in
+Security Cloud.
 
 ## 6. Roll out and verify
 

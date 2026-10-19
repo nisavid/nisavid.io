@@ -65,6 +65,25 @@ jobs:
           pnpm run lint
           pnpm run check
           pnpm --dir functions run lint
+      - name: Detect Firestore emulator tests
+        id: emulator-tests
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from "node:fs";
+          const { scripts = {} } = JSON.parse(readFileSync("functions/package.json", "utf8"));
+          appendFileSync(process.env.GITHUB_OUTPUT, `enabled=${Object.hasOwn(scripts, "test:emulator")}\n`);
+          NODE
+      - name: Set up Java for Firestore emulator tests
+        if: steps.emulator-tests.outputs.enabled == 'true'
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Test Firestore transactions and client rules
+        if: steps.emulator-tests.outputs.enabled == 'true'
+        run: |
+          java --version
+          pnpm exec firebase emulators:exec --only firestore --project demo-contact-rate-limit --non-interactive 'pnpm --dir functions run test:emulator'
 
   deployment-disabled:
     name: Deployment bootstrap status
