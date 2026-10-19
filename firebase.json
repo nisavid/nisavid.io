@@ -3,11 +3,7 @@
     "cleanUrls": true,
     "trailingSlash": false,
     "public": "dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "/robots.txt",
@@ -26,6 +22,7 @@
       "ignore": [
         "node_modules",
         ".git",
+        "**/gha-creds-*.json",
         "firebase-debug.log",
         "firebase-debug.*.log"
       ],

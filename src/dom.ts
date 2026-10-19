@@ -8,14 +8,12 @@ import { q } from "./formatting.js";
  * Define custom DOM properties.
  */
 export function defineProperties() {
-  for (
-    const class_ of [
-      HTMLButtonElement,
-      HTMLInputElement,
-      HTMLSelectElement,
-      HTMLTextAreaElement,
-    ]
-  ) {
+  for (const class_ of [
+    HTMLButtonElement,
+    HTMLInputElement,
+    HTMLSelectElement,
+    HTMLTextAreaElement,
+  ]) {
     if (!("customValidity" in class_.prototype)) {
       Object.defineProperty(class_.prototype, "customValidity", {
         get() {
@@ -34,8 +32,8 @@ export function defineProperties() {
  * Call the
  * {@link HTMLInputElement.prototype.checkValidity | `checkValidity()` method}
  * of the element with the given ID.
- * @param id - The ID of the element to check.
- * @returns
+ * @param {string} id - The ID of the element to check.
+ * @returns {Promise<ValidityState>}
  *   A promise that resolves to the the element's
  *   {@link HTMLInputElement.prototype.validity | `validity`}.
  */

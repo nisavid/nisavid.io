@@ -46,6 +46,11 @@ const asyncGlob = promisify(glob);
 const settle = (promise) =>
   Promise.allSettled([promise]).then(([{ value, reason }]) => [reason, value]);
 
+/**
+ * Remove list separators emitted after SVG comments in generated Elm code.
+ * @param {string} code - Generated Elm module source.
+ * @returns {string} Elm source without separators following comments.
+ */
 function stripCommentFollowingCommas(code) {
   return code.replace(/(\{-.*?-}),/gs, "$1");
 }

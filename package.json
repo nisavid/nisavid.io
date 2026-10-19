@@ -10,6 +10,7 @@
     "url": "https://nisavid.io"
   },
   "type": "module",
+  "packageManager": "pnpm@9.15.9",
   "source": "src/index.html",
   "scripts": {
     "build": "pnpm run clean-all:dist && pnpm run build:main",
@@ -24,12 +25,12 @@
     "deploy:hosting": "pnpm run predeploy:hosting && firebase deploy --only hosting",
     "postinstall": "elm-tooling install",
     "lint": "pnpm run lint:elm-format && pnpm run lint:eslint",
-    "lint:elm-format": "pnpm run lint:elm-format: -- src/{,**/}*.elm",
+    "lint:elm-format": "pnpm run lint:elm-format: -- src tests",
     "lint:elm-format:": "elm-format --validate",
     "lint:eslint": "pnpm run lint:eslint: -- .",
-    "lint:eslint:": "eslint --cache",
+    "lint:eslint:": "eslint --cache --max-warnings 0",
     "lint:fix": "pnpm run lint:fix:elm-format && pnpm run lint:fix:eslint",
-    "lint:fix:elm-format": "pnpm run lint:fix:elm-format: -- src/***.elm",
+    "lint:fix:elm-format": "pnpm run lint:fix:elm-format: -- src tests",
     "lint:fix:elm-format:": "elm-format",
     "lint:fix:eslint": "pnpm run lint:fix:eslint: -- .",
     "lint:fix:eslint:": "eslint --cache --fix",
@@ -48,8 +49,8 @@
     "test": "pnpm run test:elm",
     "test:e2e": "cypress run",
     "test:e2e:open": "cypress open",
-    "test:elm": "elm-test",
-    "test:elm:watch": "elm-test --watch"
+    "test:elm": "elm-test-rs",
+    "test:elm:watch": "elm-test-rs --watch"
   },
   "lint-staged": {
     "src/{,**/}*.elm": "pnpm run lint:elm-format: --",
@@ -94,7 +95,7 @@
     "eslint-plugin-no-secrets": "^1.0.2",
     "eslint-plugin-prettier": "^5.1.3",
     "eslint-plugin-tsdoc": "^0.3.0",
-    "firebase-tools": "^13.10.2",
+    "firebase-tools": "15.34.0",
     "glob": "^8.1.0",
     "globals": "^15.3.0",
     "husky": "^9.0.11",
