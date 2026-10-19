@@ -28,20 +28,24 @@ export interface Settings {
 
 /**
  * Validate the given value as a `PersistentState`.
- * @param value - The value to validate.
- * @returns The validated value.
- * @throws {@link ValidationError}
+ * @param {unknown} value - The value to validate.
+ * @returns {PersistentState} The validated value.
+ * @throws {ValidationError}
  *   If the value is not a valid `PersistentState`.
  */
-function validatePersistentState(value: any): PersistentState {
+function validatePersistentState(value: unknown): PersistentState {
   if (
-    value &&
+    value !== null &&
     typeof value === "object" &&
-    value.settings &&
+    "settings" in value &&
+    value.settings !== null &&
     typeof value.settings === "object" &&
-    ["system", "light", "dark"].includes(value.settings.theme)
+    "theme" in value.settings &&
+    (value.settings.theme === "system" ||
+      value.settings.theme === "light" ||
+      value.settings.theme === "dark")
   ) {
-    return value;
+    return value as PersistentState;
   } else {
     throw new ValidationError("Invalid persistent state", value);
   }
@@ -49,12 +53,10 @@ function validatePersistentState(value: any): PersistentState {
 
 /**
  * Determine whether the given storage type is available.
- * @param type - The type of storage to check.
- * @returns `true` if the storage `type` is available, `false` otherwise.
+ * @param {"localStorage" | "sessionStorage"} type - The type of storage to check.
+ * @returns {boolean} `true` if the storage `type` is available, `false` otherwise.
  */
-export function isAvailable(
-  type: "localStorage" | "sessionStorage",
-): boolean {
+export function isAvailable(type: "localStorage" | "sessionStorage"): boolean {
   const storage = window[type];
   const x = "__storage_test__";
   try {
@@ -73,7 +75,7 @@ export function isAvailable(
 
 /**
  * Retrieve the persistent state from local storage.
- * @returns
+ * @returns {PersistentState | null}
  *   The persistent state from local storage if it is available;
  *   `null` otherwise.
  */
@@ -106,9 +108,9 @@ export function getState(): PersistentState | null {
 
 /**
  * Store the given persistent state in local storage.
- * @param state - The persistent state to store.
+ * @param {PersistentState | null} state - The persistent state to store.
  */
-export function setState(state: PersistentState): void {
+export function setState(state: PersistentState | null): void {
   try {
     if (state === null) {
       window.localStorage.removeItem(stateKey);
@@ -127,23 +129,21 @@ export function setState(state: PersistentState): void {
 
 /**
  * Register a callback to be invoked on changes to the stored persistent state.
- * @param callback - The callback to register.
+ * @param {(state: PersistentState | null) => void} callback - The callback to register.
  */
 export function onStateChange(
-  callback: (state: PersistentState | null) => any,
+  callback: (state: PersistentState | null) => void,
 ) {
   window.addEventListener(
     "storage",
     function (event) {
-      if (
-        event.storageArea === window.localStorage &&
-        event.key === stateKey
-      ) {
+      if (event.storageArea === window.localStorage && event.key === stateKey) {
         let newValue: PersistentState | null = null;
         try {
-          newValue = event.newValue != null
-            ? validatePersistentState(JSON.parse(event.newValue))
-            : null;
+          newValue =
+            event.newValue != null
+              ? validatePersistentState(JSON.parse(event.newValue))
+              : null;
         } catch (exc) {
           console.error(
             q`Invalid persistent state in local storage at key ${stateKey}:`,

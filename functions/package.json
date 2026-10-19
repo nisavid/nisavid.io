@@ -21,7 +21,7 @@
     "deploy": "firebase deploy --only functions",
     "lint": "pnpm run lint:eslint",
     "lint:eslint": "pnpm run lint:eslint: -- .",
-    "lint:eslint:": "eslint --cache",
+    "lint:eslint:": "eslint --cache --max-warnings 0",
     "lint:fix:eslint": "pnpm run lint:fix:eslint: -- .",
     "lint:fix:eslint:": "eslint --cache --fix",
     "lint:fix:prettier": "pnpm run lint:fix:prettier: -- .",

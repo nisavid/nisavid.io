@@ -7,10 +7,10 @@
  */
 export class ValidationError extends Error {
   /**
-   * @param message - The error message.
-   * @param value - The invalid value that caused the error.
+   * @param {string} message - The error message.
+   * @param {unknown} value - The invalid value that caused the error.
    */
-  constructor(message: string, value: any) {
+  constructor(message: string, value: unknown) {
     super(message);
     this.name = "ValidationError";
     this.value = value;
@@ -22,5 +22,5 @@ export class ValidationError extends Error {
   /**
    * The invalid value that caused the error.
    */
-  value: any;
+  value: unknown;
 }

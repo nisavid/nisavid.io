@@ -11,14 +11,13 @@ import app from "./app.js";
 /**
  * Firebase analytics.
  */
-const analytics = process.env.NODE_ENV === "production"
-  ? getAnalytics(app)
-  : null;
+const analytics =
+  process.env.NODE_ENV === "production" ? getAnalytics(app) : null;
 export default analytics;
 
 /**
  * Log an analytics event.
- * @param args - Event arguments.
+ * @param {Shift<Parameters<typeof logEvent>>} args - Event arguments.
  */
 function logEvent_(...args: Shift<Parameters<typeof logEvent>>) {
   if (analytics) {

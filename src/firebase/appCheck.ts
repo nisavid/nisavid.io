@@ -19,10 +19,13 @@ if (process.env.NODE_ENV === "development") {
 /**
  * Firebase App Check initialization options.
  */
-const opts = recaptchaSiteKey == null ? null : {
-  provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey as string),
-  isTokenAutoRefreshEnabled: true,
-};
+const opts =
+  recaptchaSiteKey == null
+    ? null
+    : {
+        provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey as string),
+        isTokenAutoRefreshEnabled: true,
+      };
 
 /**
  * Firebase App Check.
