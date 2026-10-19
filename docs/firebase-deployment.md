@@ -297,10 +297,10 @@ and
 In `nisavid/nisavid.io`:
 
 1. Under **Settings → Actions → General**, enable Actions and allow the pinned
-   `actions/checkout`, `actions/setup-node`, `pnpm/action-setup`, and
-   `google-github-actions/auth` actions used by the workflow. Keep the default
-   `GITHUB_TOKEN` permissions read-only; the deployment job explicitly requests
-   `id-token: write` for OIDC.
+   `actions/checkout`, `actions/setup-node`, `actions/setup-java`,
+   `pnpm/action-setup`, and `google-github-actions/auth` actions used by the
+   workflow. Keep the default `GITHUB_TOKEN` permissions read-only; the
+   deployment job explicitly requests `id-token: write` for OIDC.
 2. Under **Settings → Environments**, create **`firebase-production`**. Restrict
    deployment branches to the selected branch **`main`**, with no tag rule. Omit
    required deployment reviewers and wait timers if every accepted merge should
@@ -342,13 +342,12 @@ Secret Manager; no GitHub secret with that value is needed. See
    PR-based changes, required CI checks, appropriate PR review, blocked force
    pushes/deletion, and review of workflow changes. Require the applicable
    **`Validate Firebase build`** check after it has appeared on a workflow run.
-   Its strict root lint/typecheck and Functions lint steps become active when
-   the repository deployment gate is `true`; before activation, build and other
-   tests run while the known lint fixes are being landed. A production
-   deployment check is a post-merge result, not a PR acceptance requirement.
-   These are recommendations; the repository's existing policies must be
-   inspected rather than assumed. Protecting `main` also prevents a direct push
-   from bypassing the intended merge-before-deployment process.
+   It always runs strict root lint/typecheck and Functions lint alongside the
+   build and tests, independently of the repository deployment gate. A
+   production deployment check is a post-merge result, not a PR acceptance
+   requirement. These are recommendations; the repository's existing policies
+   must be inspected rather than assumed. Protecting `main` also prevents a
+   direct push from bypassing the intended merge-before-deployment process.
 
 ## 5. Configure Codex Security Cloud for validation
 
@@ -423,15 +422,88 @@ October 19 scan on `a0623ced02abff58d8383f5b05633a4b97f263f6` explicitly reports
 offline static review. It does not verify this sequence, production IAM/WIF,
 or a live deployment. Local and GitHub Actions results are separate evidence.
 
+### Firestore emulator prerequisites
+
+The rate-limit fix adds `functions`' `test:emulator` script. When it is present,
+the required **Validate Firebase build** job also runs its real Firestore
+transaction and client-rule tests against `demo-contact-rate-limit`. It selects
+Temurin Java 21 and needs no production credentials. A failing emulator test
+fails validation even while production deployment remains disabled.
+
+The reported Codex setup above predates these tests. For execution in Codex
+Security Cloud, additionally select Java 21 or newer and record `java --version`
+with the validation results. Do not assume the Universal image or a successful
+static scan establishes the installed Java version. Firebase CLI 15.34.0 rejects
+Java versions below 21.
+
+For Linux x86-64, the following optional setup installs the verified Temurin
+21.0.12.1+1 JRE archive. Append it to both setup and maintenance scripts if the
+environment does not already supply a compatible Java runtime:
+
+```bash
+set -euo pipefail
+case "$(uname -s):$(uname -m)" in
+  Linux:x86_64) ;;
+  *) echo 'This Java archive requires Linux x86-64.' >&2; exit 1 ;;
+esac
+
+CONTACT_JAVA_DIR="$HOME/.cache/nisavid-temurin21"
+CONTACT_JAVA_ARCHIVE="$CONTACT_JAVA_DIR/temurin21-jre.tar.gz"
+mkdir -p "$CONTACT_JAVA_DIR"
+curl --fail --location \
+  'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jre_x64_linux_hotspot_21.0.12.1_1.tar.gz' \
+  --output "$CONTACT_JAVA_ARCHIVE"
+printf '%s  %s\n' \
+  '2413149700df0f7d440500a84a8f764c535f21e5a5e87d38328b64eec2c5b500' \
+  "$CONTACT_JAVA_ARCHIVE" | sha256sum --check
+tar --extract --gzip --no-same-owner \
+  --file "$CONTACT_JAVA_ARCHIVE" --directory "$CONTACT_JAVA_DIR"
+export JAVA_HOME="$CONTACT_JAVA_DIR/jdk-21.0.12.1+1-jre"
+export PATH="$JAVA_HOME/bin:$PATH"
+java --version
+```
+
+The checksum is published beside the archive as `.sha256.txt`. Keep the version,
+archive, and checksum in sync when deliberately updating Java. The download uses
+`github.com` and `release-assets.githubusercontent.com`, already in the reported
+allowlist. Select the installed runtime in every validation shell as well;
+exports made during setup must not be assumed to persist into later agent
+shells:
+
+```bash
+export JAVA_HOME="$HOME/.cache/nisavid-temurin21/jdk-21.0.12.1+1-jre"
+export PATH="$JAVA_HOME/bin:$PATH"
+java --version
+```
+
+Add `storage.googleapis.com` to the Codex custom domain allowlist for the
+Firestore emulator download, or pre-cache the emulator matching the pinned
+Firebase CLI during setup. CLI 15.34.0 uses Firestore emulator 1.22.0 and
+verifies its bundled checksum. After installing dependencies,
+`pnpm exec firebase setup:emulators:firestore` populates the emulator cache.
+Neither the JRE download nor the emulator requires production cloud access or
+secret values.
+
+Once the rate-limit tests are present, include this command in the complete
+validation sequence from the repository root:
+
+```bash
+pnpm exec firebase emulators:exec --only firestore --project demo-contact-rate-limit --non-interactive 'pnpm --dir functions run test:emulator'
+```
+
+The tests refuse to run without a loopback emulator and the exact demo project.
+Retain the Java version, commit SHA, and emulator test exit result as execution
+evidence; the operator handoff does not establish that these additions ran in
+Security Cloud.
+
 ## 6. Roll out and verify
 
 1. Merge the workflow PR first, leaving `FIREBASE_DEPLOY_ENABLED` disabled.
-   Production remains gated while the known lint failures are fixed.
-2. Merge lint configuration PR **#5**, then its stacked cleanup PR **#6**, while
-   deployment remains gated. Retarget/rebase the stack as needed. Verify the
+   Production remains gated until the rollout prerequisites are complete.
+2. With lint configuration PR **#5** and cleanup PR **#6** merged, verify the
    build validation succeeds on `main` and run the complete validation sequence
-   above before activation. Activation also enables the strict lint/typecheck
-   steps in PR validation.
+   above before activation. Strict lint/typecheck steps run in PR validation
+   while deployment remains gated.
 3. Refresh the security fixes onto the updated `main`, preserving the Node.js 22
    Functions engine when resolving PR **#4**'s `package.json` changes. Address
    the App Check replay, missing email limits, and structured-log metadata
