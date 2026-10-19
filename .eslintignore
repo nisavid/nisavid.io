@@ -1,7 +1,0 @@
-!.prettierrc
-**/pnpm-lock.yaml
-.git/
-.parcel-cache/
-dist/
-elm-stuff/
-pnpm-lock.yaml
