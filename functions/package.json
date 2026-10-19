@@ -11,6 +11,7 @@
     "url": "https://nisavid.io"
   },
   "type": "commonjs",
+  "packageManager": "pnpm@9.15.9",
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc",
@@ -48,6 +49,7 @@
     "typescript": "^5.4.5"
   },
   "engines": {
-    "node": "20"
+    "node": "22",
+    "pnpm": "9.15.9"
   }
 }

@@ -1,0 +1,176 @@
+name: Firebase deployment
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CI: "true"
+  HUSKY: "0"
+
+jobs:
+  validate:
+    name: Validate Firebase build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            functions/pnpm-lock.yaml
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir functions install --frozen-lockfile
+      - name: Test deployment configuration validation
+        run: node --test scripts/ci/*.test.mjs
+      - name: Build site with public test configuration
+        env:
+          FIREBASE_API_KEY: ci-public-placeholder
+          FIREBASE_AUTH_DOMAIN: ci-placeholder.firebaseapp.com
+          FIREBASE_PROJECT_ID: ci-placeholder
+          FIREBASE_STORAGE_BUCKET: ci-placeholder.appspot.com
+          FIREBASE_MESSAGING_SENDER_ID: "123456789"
+          FIREBASE_APP_ID: "1:123456789:web:placeholder"
+          FIREBASE_MEASUREMENT_ID: G-PLACEHOLDER
+          FIREBASE_RECAPTCHA_SITE_KEY: ci-public-placeholder
+        run: pnpm run build
+      - name: Test Elm
+        run: pnpm exec elm-test-rs
+      - name: Check and build Functions
+        run: |
+          pnpm --dir functions run check
+          pnpm --dir functions run build
+          pnpm --dir functions --if-present run test
+      - name: Enforce production checks after bootstrap
+        if: vars.FIREBASE_DEPLOY_ENABLED == 'true'
+        run: |
+          pnpm run lint
+          pnpm run check
+          pnpm --dir functions run lint
+
+  deployment-disabled:
+    name: Deployment bootstrap status
+    if: >-
+      github.ref == 'refs/heads/main' && github.event_name != 'pull_request' &&
+      vars.FIREBASE_DEPLOY_ENABLED != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain deployment activation
+        run: |
+          echo '### Firebase deployment is not enabled' >> "$GITHUB_STEP_SUMMARY"
+          echo 'No production deployment was attempted. Complete docs/firebase-deployment.md, then set the repository variable FIREBASE_DEPLOY_ENABLED to true.' >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Deploy Firebase production
+    needs: validate
+    if: >-
+      github.ref == 'refs/heads/main' && github.event_name != 'pull_request' &&
+      vars.FIREBASE_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment:
+      name: firebase-production
+      url: https://nisavid.io
+    concurrency:
+      group: firebase-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+      FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+      FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+      FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+      FIREBASE_MESSAGING_SENDER_ID: ${{ vars.FIREBASE_MESSAGING_SENDER_ID }}
+      FIREBASE_APP_ID: ${{ vars.FIREBASE_APP_ID }}
+      FIREBASE_MEASUREMENT_ID: ${{ vars.FIREBASE_MEASUREMENT_ID }}
+      FIREBASE_RECAPTCHA_SITE_KEY: ${{ vars.FIREBASE_RECAPTCHA_SITE_KEY }}
+      FIREBASE_FUNCTIONS_SENDER: ${{ vars.FIREBASE_FUNCTIONS_SENDER }}
+      FIREBASE_FUNCTIONS_TO: ${{ vars.FIREBASE_FUNCTIONS_TO }}
+      GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+      GCP_DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            functions/pnpm-lock.yaml
+      - name: Validate production configuration
+        run: node scripts/ci/firebase-env.mjs
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir functions install --frozen-lockfile
+      - name: Build, lint, and test production sources
+        run: |
+          node --test scripts/ci/*.test.mjs
+          pnpm run build
+          pnpm run lint
+          pnpm run check
+          pnpm exec elm-test-rs
+          pnpm --dir functions run lint
+          pnpm --dir functions run check
+          pnpm --dir functions run build
+          pnpm --dir functions --if-present run test
+      - name: Skip commits superseded on main
+        id: current-main
+        run: |
+          current_main="$(git ls-remote --exit-code origin refs/heads/main | cut -f 1)"
+          if [ "$current_main" = "$GITHUB_SHA" ]; then
+            echo 'deploy=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'deploy=false' >> "$GITHUB_OUTPUT"
+            echo '### Deployment skipped: a newer commit is on main' >> "$GITHUB_STEP_SUMMARY"
+            echo 'The workflow for the current main commit will deploy after its checks pass.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Write Functions parameters
+        if: steps.current-main.outputs.deploy == 'true'
+        run: node scripts/ci/firebase-env.mjs --write-functions-env
+      - name: Authenticate to Google Cloud
+        if: steps.current-main.outputs.deploy == 'true'
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: xenon-sentry-395319
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - name: Deploy Hosting and Functions
+        if: steps.current-main.outputs.deploy == 'true'
+        run:
+          pnpm exec firebase deploy --project xenon-sentry-395319 --only
+          hosting,functions --non-interactive
+      - name: Record successful deployment
+        if: success() && steps.current-main.outputs.deploy == 'true'
+        run: |
+          echo '### Firebase deployment succeeded' >> "$GITHUB_STEP_SUMMARY"
+          echo "Deployed commit $GITHUB_SHA to https://nisavid.io (Hosting and Functions)." >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove Functions parameter file
+        if: always()
+        run: rm -f functions/.env.xenon-sentry-395319
