@@ -1,6 +1,7 @@
 **/*.log
 **/.DS_Store/
 **/.env*
+**/gha-creds-*.json
 **/elm-stuff/
 **/node_modules/
 **/Session.vim
