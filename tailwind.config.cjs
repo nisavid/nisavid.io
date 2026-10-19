@@ -1,7 +1,7 @@
-import defaultTheme from "tailwindcss/defaultTheme";
+const defaultTheme = require("tailwindcss/defaultTheme");
 
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
   content: ["src/**/*.{elm,html,js}"],
   theme: {
     extend: {

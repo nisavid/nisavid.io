@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "Bundler",
     "isolatedModules": true,
     "allowJs": true,
     "checkJs": true,
@@ -11,8 +11,5 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": [
-    "src",
-    ".eslintrc.cjs"
-  ]
+  "include": ["src", ".eslintrc.cjs"]
 }

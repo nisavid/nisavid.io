@@ -28,18 +28,30 @@ module.exports = {
   rules: {
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/no-unused-vars": "off",
-    "jsdoc/check-param-names": [1, {
-      checkDestructured: false,
-    }],
-    "jsdoc/require-description": [1, {
-      contexts: ["ClassDeclaration", "ClassProperty", "FunctionDeclaration"],
-    }],
-    "jsdoc/require-jsdoc": [1, {
-      contexts: ["ClassDeclaration", "ClassProperty", "FunctionDeclaration"],
-    }],
-    "jsdoc/require-param": [1, {
-      checkDestructured: false,
-    }],
+    "jsdoc/check-param-names": [
+      1,
+      {
+        checkDestructured: false,
+      },
+    ],
+    "jsdoc/require-description": [
+      1,
+      {
+        contexts: ["ClassDeclaration", "ClassProperty", "FunctionDeclaration"],
+      },
+    ],
+    "jsdoc/require-jsdoc": [
+      1,
+      {
+        contexts: ["ClassDeclaration", "ClassProperty", "FunctionDeclaration"],
+      },
+    ],
+    "jsdoc/require-param": [
+      1,
+      {
+        checkDestructured: false,
+      },
+    ],
     "jsdoc/require-param-type": "off",
     "jsdoc/require-property-description": 1,
     "jsdoc/require-returns-type": "off",

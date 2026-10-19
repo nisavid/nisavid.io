@@ -17,18 +17,22 @@ import {
 import * as Analytics from "./firebase/analytics.js";
 
 /**
+ * A Web Vital measured by this module.
+ */
+type ReportedMetric =
+  | CLSMetricWithAttribution
+  | FIDMetricWithAttribution
+  | INPMetricWithAttribution
+  | LCPMetricWithAttribution;
+
+/**
  * Log a Web Vital to Google Analytics.
- * @param metric - A {@link https://github.com/GoogleChrome/web-vitals} metric.
+ * @param {ReportedMetric} metric - A {@link https://github.com/GoogleChrome/web-vitals} metric.
  * @see https://web.dev/vitals-field-measurement-best-practices/
  */
-function log(
-  { name, delta, value, id, attribution }:
-    | CLSMetricWithAttribution
-    | FIDMetricWithAttribution
-    | INPMetricWithAttribution
-    | LCPMetricWithAttribution,
-) {
-  const eventParams: Record<string, any> = {
+function log(metric: ReportedMetric) {
+  const { name, delta, value, id, attribution } = metric;
+  const eventParams: Record<string, string | number | boolean | undefined> = {
     event_category: "Web Vitals",
     // Use a non-interaction event to avoid affecting bounce rate
     non_interaction: true,
@@ -48,7 +52,7 @@ function log(
       eventParams.debug_target = attribution.eventTarget;
       break;
     case "INP":
-      eventParams.debug_target = attribution.eventTarget;
+      eventParams.debug_target = attribution.interactionTarget;
       break;
     case "LCP":
       eventParams.debug_target = attribution.element;
