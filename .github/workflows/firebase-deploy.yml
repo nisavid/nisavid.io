@@ -60,8 +60,7 @@ jobs:
           pnpm --dir functions run check
           pnpm --dir functions run build
           pnpm --dir functions --if-present run test
-      - name: Enforce production checks after bootstrap
-        if: vars.FIREBASE_DEPLOY_ENABLED == 'true'
+      - name: Lint and typecheck sources
         run: |
           pnpm run lint
           pnpm run check

@@ -319,13 +319,12 @@ Secret Manager; no GitHub secret with that value is needed. See
    PR-based changes, required CI checks, appropriate PR review, blocked force
    pushes/deletion, and review of workflow changes. Require the applicable
    **`Validate Firebase build`** check after it has appeared on a workflow run.
-   Its strict root lint/typecheck and Functions lint steps become active when
-   the repository deployment gate is `true`; before activation, build and other
-   tests run while the known lint fixes are being landed. A production
-   deployment check is a post-merge result, not a PR acceptance requirement.
-   These are recommendations; the repository's existing policies must be
-   inspected rather than assumed. Protecting `main` also prevents a direct push
-   from bypassing the intended merge-before-deployment process.
+   It always runs strict root lint/typecheck and Functions lint alongside the
+   build and tests, independently of the repository deployment gate. A
+   production deployment check is a post-merge result, not a PR acceptance
+   requirement. These are recommendations; the repository's existing policies
+   must be inspected rather than assumed. Protecting `main` also prevents a
+   direct push from bypassing the intended merge-before-deployment process.
 
 ## 5. Configure Codex Security Cloud for validation
 
@@ -366,12 +365,11 @@ deployment job handles production.
 ## 6. Roll out and verify
 
 1. Merge the workflow PR first, leaving `FIREBASE_DEPLOY_ENABLED` disabled.
-   Production remains gated while the known lint failures are fixed.
-2. Merge lint configuration PR **#5**, then its stacked cleanup PR **#6**, while
-   deployment remains gated. Retarget/rebase the stack as needed. Verify the
+   Production remains gated until the rollout prerequisites are complete.
+2. With lint configuration PR **#5** and cleanup PR **#6** merged, verify the
    build validation succeeds on `main` and run the complete validation sequence
-   above before activation. Activation also enables the strict lint/typecheck
-   steps in PR validation.
+   above before activation. Strict lint/typecheck steps run in PR validation
+   while deployment remains gated.
 3. Complete Google Cloud IAM/WIF and the GitHub environment configuration above.
    Set the repository variable `FIREBASE_DEPLOY_ENABLED=true`, then use
    **Actions → Firebase deployment → Run workflow**, selecting **`main`**. Wait
