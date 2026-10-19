@@ -26,9 +26,14 @@ export const sendContactFormEmail = onCall(
     secrets: [mailtrapToken],
   },
   async (request) => {
+    const subject: unknown = request.data?.subject;
+    if (typeof subject !== "string") {
+      throw new HttpsError("invalid-argument", "Subject must be a string");
+    }
+
     Logger.info(
       `Received request to send message from ${request.data.name} <${request.data.email}>:`,
-      request.data.subject,
+      subject,
     );
 
     const client = (() => {
@@ -69,7 +74,7 @@ export const sendContactFormEmail = onCall(
       from: { name: request.data.name, email: sender.value() },
       to: [{ email: to.value() }],
       headers: { "Reply-To": `${request.data.name} <${request.data.email}>` },
-      subject: request.data.subject,
+      subject,
       text: request.data.body,
     };
 
@@ -85,7 +90,7 @@ export const sendContactFormEmail = onCall(
 
     Logger.info(
       `Sent message from ${request.data.name} <${request.data.email}>:`,
-      request.data.subject,
+      subject,
     );
   },
 );

@@ -1,0 +1,29 @@
+diff --git a/lib/common/providers/https.js b/lib/common/providers/https.js
+index 15651078baff5360e7fb596bb979f14044d420e9..c830e689349f1da1ab77888695527f2f1ed41f28 100644
+--- a/lib/common/providers/https.js
++++ b/lib/common/providers/https.js
+@@ -117,7 +117,7 @@ function isValidRequest(req) {
+     }
+     // The body must have data.
+     if (typeof req.body.data === "undefined") {
+-        logger.warn("Request body is missing data.", req.body);
++        logger.warn("Request body is missing data.", JSON.stringify(req.body));
+         return false;
+     }
+     // TODO(klimt): Allow only specific http headers.
+@@ -193,13 +193,13 @@ function decode(data) {
+                 // worth all the extra code to detect that case.
+                 const value = parseFloat(data.value);
+                 if (isNaN(value)) {
+-                    logger.error("Data cannot be decoded from JSON.", data);
++                    logger.error("Data cannot be decoded from JSON.", JSON.stringify(data));
+                     throw new Error(`Data cannot be decoded from JSON: ${data}`);
+                 }
+                 return value;
+             }
+             default: {
+-                logger.error("Data cannot be decoded from JSON.", data);
++                logger.error("Data cannot be decoded from JSON.", JSON.stringify(data));
+                 throw new Error(`Data cannot be decoded from JSON: ${data}`);
+             }
+         }
