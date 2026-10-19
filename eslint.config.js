@@ -23,12 +23,39 @@ import jsonSchema from "eslint-plugin-json-schema-validator";
 import prettier from "eslint-plugin-prettier";
 
 export default [
-  js.configs.recommended,
-  ...compat.extends("plugin:@typescript-eslint/strict"),
-  ...compat.extends("plugin:@typescript-eslint/stylistic"),
+  {
+    ignores: [
+      "**/pnpm-lock.yaml",
+      "**/.git/",
+      "**/.parcel-cache/",
+      "**/dist/",
+      "**/elm-stuff/",
+      "functions/lib/",
+    ],
+  },
+  ...[
+    js.configs.recommended,
+    ...compat.extends("plugin:@typescript-eslint/strict"),
+    ...compat.extends("plugin:@typescript-eslint/stylistic"),
+    ...compat.config(jsdoc.configs.recommended),
+    {
+      languageOptions: {
+        globals: {
+          ...globals.browser,
+          ...globals.node,
+        },
+      },
+      rules: {
+        "@typescript-eslint/no-unused-vars": "warn",
+      },
+    },
+  ].map((config) => ({
+    ...config,
+    // Preserve the presets' narrower TypeScript-only overrides.
+    files: config.files ?? ["**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}"],
+  })),
   ...compat.plugins("editorconfig"),
   editorconfig.configs.all,
-  ...compat.config(jsdoc.configs.recommended),
   ...compat.config(jsonc.configs.base),
   ...compat.config(jsonSchema.configs.recommended),
   //...compat.plugins("@html-eslint"),
@@ -43,17 +70,15 @@ export default [
   //...compat.config(markdown.configs.recommended),
   ...compat.config(prettier.configs.recommended),
   {
-    languageOptions: {
-      globals: {
-        ...globals.browser,
-        ...globals.node,
-      },
+    files: ["**/*.toml"],
+    rules: {
+      // No TOML formatter is installed; Prettier otherwise uses JavaScript.
+      "prettier/prettier": "off",
     },
+  },
+  {
     linterOptions: {
       reportUnusedDisableDirectives: true,
-    },
-    rules: {
-      "@typescript-eslint/no-unused-vars": "warn",
     },
   },
 ];
