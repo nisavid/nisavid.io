@@ -182,6 +182,10 @@ done
 
 for account in "$RUNTIME_SA" "$BUILD_SA" "$PROJECT_ID@appspot.gserviceaccount.com"
 do
+  # The Google-owned legacy Cloud Build account cannot have account IAM bindings.
+  if [ "$account" = "$PROJECT_NUMBER@cloudbuild.gserviceaccount.com" ]; then
+    continue
+  fi
   gcloud iam service-accounts add-iam-policy-binding "$account" \
     --project="$PROJECT_ID" --member="serviceAccount:$DEPLOY_SA" \
     --role=roles/iam.serviceAccountUser --condition=None
@@ -193,12 +197,31 @@ gcloud secrets add-iam-policy-binding MAILTRAP_PASS --project="$PROJECT_ID" \
 ```
 
 The `actAs` grants apply to individual accounts, not every service account in
-the project. Firebase CLI 15.34.0 still tests `actAs` on the legacy App Engine
+the project. The loop excludes the Google-owned legacy Cloud Build account,
+`PROJECT_NUMBER@cloudbuild.gserviceaccount.com`, because it cannot accept an
+account IAM policy. Its project-level build permissions are separate. A
+user-managed or default Compute Engine account used for builds still needs the
+account-scoped grant. Confirm the actual build identity before running this
+loop; merely finding a legacy account with the builder role does not establish
+that this function uses it. See
+[the legacy Cloud Build account's limitations](https://docs.cloud.google.com/build/docs/cloud-build-service-account#limitations).
+
+Firebase CLI 15.34.0 still tests `actAs` on the legacy App Engine
 account even for gen2 deployment; this explains the additional
 `PROJECT_ID@appspot.gserviceaccount.com` entry. Verify that account exists
 before granting it; do not recreate a missing legacy account merely for this
 command. If it is absent, inspect the CLI's preflight result during initial
 verification.
+
+The October 19, 2026 operator handoff reports that
+`xenon-sentry-395319@appspot.gserviceaccount.com` retains project Editor and that
+the deployer has `actAs` on it. Together with permission to deploy Functions,
+this permits workloads to run with that account's broad privileges. Restricting
+the grant to one account does not make this configuration fully least-privileged,
+and a separate Token Creator grant is not needed for this path. Before
+activation, inventory the account's consumers and replace Editor with their
+required scoped roles, or explicitly review and accept this remaining access.
+Do not remove Editor blindly from an account that may serve existing workloads.
 
 The Secret Manager Viewer role permits metadata inspection, including the latest
 enabled version; it does not grant access to the token's payload. Grant the
@@ -274,10 +297,10 @@ and
 In `nisavid/nisavid.io`:
 
 1. Under **Settings → Actions → General**, enable Actions and allow the pinned
-   `actions/checkout`, `actions/setup-node`, `pnpm/action-setup`, and
-   `google-github-actions/auth` actions used by the workflow. Keep the default
-   `GITHUB_TOKEN` permissions read-only; the deployment job explicitly requests
-   `id-token: write` for OIDC.
+   `actions/checkout`, `actions/setup-node`, `actions/setup-java`,
+   `pnpm/action-setup`, and `google-github-actions/auth` actions used by the
+   workflow. Keep the default `GITHUB_TOKEN` permissions read-only; the
+   deployment job explicitly requests `id-token: write` for OIDC.
 2. Under **Settings → Environments**, create **`firebase-production`**. Restrict
    deployment branches to the selected branch **`main`**, with no tag rule. Omit
    required deployment reviewers and wait timers if every accepted merge should
@@ -319,30 +342,60 @@ Secret Manager; no GitHub secret with that value is needed. See
    PR-based changes, required CI checks, appropriate PR review, blocked force
    pushes/deletion, and review of workflow changes. Require the applicable
    **`Validate Firebase build`** check after it has appeared on a workflow run.
-   Its strict root lint/typecheck and Functions lint steps become active when
-   the repository deployment gate is `true`; before activation, build and other
-   tests run while the known lint fixes are being landed. A production
-   deployment check is a post-merge result, not a PR acceptance requirement.
-   These are recommendations; the repository's existing policies must be
-   inspected rather than assumed. Protecting `main` also prevents a direct push
-   from bypassing the intended merge-before-deployment process.
+   It always runs strict root lint/typecheck and Functions lint alongside the
+   build and tests, independently of the repository deployment gate. A
+   production deployment check is a post-merge result, not a PR acceptance
+   requirement. These are recommendations; the repository's existing policies
+   must be inspected rather than assumed. Protecting `main` also prevents a
+   direct push from bypassing the intended merge-before-deployment process.
 
 ## 5. Configure Codex Security Cloud for validation
 
 The existing `nisavid/nisavid.io` environment is
-`6ac2d3029a78819196aeaebfe1b4bc12`. Configure it for Node.js 22 and pnpm 9.15.9,
-install both the root and Functions dependencies from their frozen lockfiles,
-and permit the network access needed for npm packages, Elm tooling, and Elm
-packages (`registry.npmjs.org`, `github.com` and its release/package download
-hosts, and `package.elm-lang.org`). Run installation with lifecycle scripts so
-the repository's Elm tooling is installed. Git hooks can be disabled with
-`HUSKY=0` in this noninteractive environment.
+`6ac2d3029a78819196aeaebfe1b4bc12`, with workspace `/workspace/nisavid.io`.
+Use the Universal image, explicitly select Node.js 22, select Manual setup,
+and enable container caching. Use the following for both setup and maintenance
+so a resumed container installs the current lockfiles:
+
+```bash
+set -euo pipefail
+cd /workspace/nisavid.io
+export HUSKY=0
+
+corepack enable
+corepack prepare pnpm@9.15.9 --activate
+
+node --version
+pnpm --version
+pnpm install --frozen-lockfile
+pnpm --dir functions install --frozen-lockfile
+```
+
+Keep lifecycle scripts enabled for Elm tooling. Set persistent `HUSKY=0` and
+the eight synthetic browser Firebase variables from the workflow's
+**Build site with public test configuration** step. Leave Secrets empty.
+
+Enable agent internet access with Custom domains:
+
+```text
+registry.npmjs.org, github.com, api.github.com, codeload.github.com, raw.githubusercontent.com, objects.githubusercontent.com, release-assets.githubusercontent.com, github-releases.githubusercontent.com, package.elm-lang.org, nodejs.org
+```
+
+Leave **Read-only HTTP methods** off: Elm uses POST requests to read its package
+registry. This configuration is from the October 19, 2026 operator handoff;
+it is not evidence that a particular scan executed the installation or tests.
 
 The normal validation sequence is:
 
 ```bash
+set -euo pipefail
+export HUSKY=0
+git rev-parse HEAD
+node --version
+pnpm --version
 HUSKY=0 pnpm install --frozen-lockfile
 pnpm --dir functions install --frozen-lockfile
+node --test scripts/ci/*.test.mjs
 pnpm run build
 pnpm run lint
 pnpm run check
@@ -363,30 +416,126 @@ impersonation, Firebase login tokens, `MAILTRAP_PASS`, or production cloud
 access in Security Cloud. Its role is to validate patches; GitHub's protected
 deployment job handles production.
 
+Retain the commit SHA, runtime versions, commands, and exit results from a task
+that actually executes this sequence in the Cloud environment. The successful
+October 19 scan on `a0623ced02abff58d8383f5b05633a4b97f263f6` explicitly reports
+offline static review. It does not verify this sequence, production IAM/WIF,
+or a live deployment. Local and GitHub Actions results are separate evidence.
+
+### Firestore emulator prerequisites
+
+The rate-limit fix adds `functions`' `test:emulator` script. When it is present,
+the required **Validate Firebase build** job also runs its real Firestore
+transaction and client-rule tests against `demo-contact-rate-limit`. It selects
+Temurin Java 21 and needs no production credentials. A failing emulator test
+fails validation even while production deployment remains disabled.
+
+The reported Codex setup above predates these tests. For execution in Codex
+Security Cloud, additionally select Java 21 or newer and record `java --version`
+with the validation results. Do not assume the Universal image or a successful
+static scan establishes the installed Java version. Firebase CLI 15.34.0 rejects
+Java versions below 21.
+
+For Linux x86-64, the following optional setup installs the verified Temurin
+21.0.12.1+1 JRE archive. Append it to both setup and maintenance scripts if the
+environment does not already supply a compatible Java runtime:
+
+```bash
+set -euo pipefail
+case "$(uname -s):$(uname -m)" in
+  Linux:x86_64) ;;
+  *) echo 'This Java archive requires Linux x86-64.' >&2; exit 1 ;;
+esac
+
+CONTACT_JAVA_DIR="$HOME/.cache/nisavid-temurin21"
+CONTACT_JAVA_ARCHIVE="$CONTACT_JAVA_DIR/temurin21-jre.tar.gz"
+mkdir -p "$CONTACT_JAVA_DIR"
+curl --fail --location \
+  'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jre_x64_linux_hotspot_21.0.12.1_1.tar.gz' \
+  --output "$CONTACT_JAVA_ARCHIVE"
+printf '%s  %s\n' \
+  '2413149700df0f7d440500a84a8f764c535f21e5a5e87d38328b64eec2c5b500' \
+  "$CONTACT_JAVA_ARCHIVE" | sha256sum --check
+tar --extract --gzip --no-same-owner \
+  --file "$CONTACT_JAVA_ARCHIVE" --directory "$CONTACT_JAVA_DIR"
+export JAVA_HOME="$CONTACT_JAVA_DIR/jdk-21.0.12.1+1-jre"
+export PATH="$JAVA_HOME/bin:$PATH"
+java --version
+```
+
+The checksum is published beside the archive as `.sha256.txt`. Keep the version,
+archive, and checksum in sync when deliberately updating Java. The download uses
+`github.com` and `release-assets.githubusercontent.com`, already in the reported
+allowlist. Select the installed runtime in every validation shell as well;
+exports made during setup must not be assumed to persist into later agent
+shells:
+
+```bash
+export JAVA_HOME="$HOME/.cache/nisavid-temurin21/jdk-21.0.12.1+1-jre"
+export PATH="$JAVA_HOME/bin:$PATH"
+java --version
+```
+
+Add `storage.googleapis.com` to the Codex custom domain allowlist for the
+Firestore emulator download, or pre-cache the emulator matching the pinned
+Firebase CLI during setup. CLI 15.34.0 uses Firestore emulator 1.22.0 and
+verifies its bundled checksum. After installing dependencies,
+`pnpm exec firebase setup:emulators:firestore` populates the emulator cache.
+Neither the JRE download nor the emulator requires production cloud access or
+secret values.
+
+Once the rate-limit tests are present, include this command in the complete
+validation sequence from the repository root:
+
+```bash
+pnpm exec firebase emulators:exec --only firestore --project demo-contact-rate-limit --non-interactive 'pnpm --dir functions run test:emulator'
+```
+
+The tests refuse to run without a loopback emulator and the exact demo project.
+Retain the Java version, commit SHA, and emulator test exit result as execution
+evidence; the operator handoff does not establish that these additions ran in
+Security Cloud.
+
 ## 6. Roll out and verify
 
 1. Merge the workflow PR first, leaving `FIREBASE_DEPLOY_ENABLED` disabled.
-   Production remains gated while the known lint failures are fixed.
-2. Merge lint configuration PR **#5**, then its stacked cleanup PR **#6**, while
-   deployment remains gated. Retarget/rebase the stack as needed. Verify the
+   Production remains gated until the rollout prerequisites are complete.
+2. With lint configuration PR **#5** and cleanup PR **#6** merged, verify the
    build validation succeeds on `main` and run the complete validation sequence
-   above before activation. Activation also enables the strict lint/typecheck
-   steps in PR validation.
-3. Complete Google Cloud IAM/WIF and the GitHub environment configuration above.
-   Set the repository variable `FIREBASE_DEPLOY_ENABLED=true`, then use
-   **Actions → Firebase deployment → Run workflow**, selecting **`main`**. Wait
-   for a fully successful Hosting **and** Functions deployment before
+   above before activation. Strict lint/typecheck steps run in PR validation
+   while deployment remains gated.
+3. Refresh the security fixes onto the updated `main`, preserving the Node.js 22
+   Functions engine when resolving PR **#4**'s `package.json` changes. Address
+   the App Check replay, missing email limits, and structured-log metadata
+   findings reported in the October 19 scan. PR **#7** proposes replay rejection
+   and durable rate limits; it still needs payload validation and safe logging.
+   Complete independent reviews and merge the accepted fixes while deployment
+   remains disabled. Rerun the full validation sequence on the resulting `main`.
+4. Complete Google Cloud IAM/WIF and the GitHub environment configuration above.
+   Confirm the function's actual build identity and Artifact Registry cleanup
+   policy; the operator handoff does not establish either. Review the legacy
+   App Engine Editor access described above. If adopting PR **#7**, also
+   provision and verify its dedicated `contact-form` Firestore database, client
+   deny rules, `CONTACT_RATE_LIMIT_SECRET`, and the database-conditioned runtime
+   and secret-level runtime/deployer IAM grants in
+   [PR #7's deployment specification](https://github.com/nisavid/nisavid.io/blob/f99552607ed023f51993ab9519315ee87261e17c/functions/README.md#deployment).
+   Verify the trusted ingress chain used for network rate limits. The workflow
+   deploys only Hosting and Functions, so it does not provision those Firestore rules.
+   Preserve the existing public callable invocation policy and Secret Manager
+   runtime access. Recheck WIF and the GitHub environment before activation.
+5. After these prerequisites are complete and production activation is
+   authorized, set the repository variable `FIREBASE_DEPLOY_ENABLED=true`, then
+   use **Actions → Firebase deployment → Run workflow**, selecting **`main`**.
+   Wait for a fully successful Hosting **and** Functions deployment before
    proceeding. Enabling the variable alone does not trigger a run.
-4. Verify the live site at <https://nisavid.io>, check browser initialization
+6. Verify the live site at <https://nisavid.io>, check browser initialization
    and App Check, and manually submit an intentional contact-form test to
    confirm email delivery. Verify the deployed function uses Node.js 22 and the
    intended secret and parameters. A green build alone does not prove live email
    delivery.
-5. Rebase security PR **#4** onto the updated `main`, preserving the Node.js 22
-   Functions engine when resolving its `package.json` changes. Merge it only
-   after that initial deployment succeeds. Its push to `main` then runs the
-   parser regression tests and automatically deploys the fix. Check the
-   resulting deployment run and the live application again.
+7. Subsequent accepted merges to `main` run validation and automatically deploy
+   while the gate is enabled. Check each deployment result before declaring its
+   fixes live.
 
 Firebase Hosting and Functions are **not an atomic release**. One component can
 succeed while the other fails; inspect both results before declaring a change
