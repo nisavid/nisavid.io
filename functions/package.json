@@ -12,6 +12,7 @@
   },
   "type": "commonjs",
   "main": "lib/index.js",
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc --watch",
@@ -31,7 +32,8 @@
     "release": "pnpm run deploy",
     "start": "pnpm run start:serve",
     "start:serve": "pnpm run build && firebase emulators:start --only functions",
-    "start:shell": "pnpm run build && firebase functions:shell"
+    "start:shell": "pnpm run build && firebase functions:shell",
+    "test": "pnpm run build && node --test test/*.test.mjs"
   },
   "dependencies": {
     "@google-cloud/functions-framework": "^3.4.0",
@@ -47,7 +49,13 @@
     "firebase-functions-test": "^3.2.0",
     "typescript": "^5.4.5"
   },
+  "pnpm": {
+    "overrides": {
+      "body-parser@<1.20.8": "^1.20.8"
+    }
+  },
   "engines": {
-    "node": "20"
+    "node": "20",
+    "pnpm": "9.15.9"
   }
 }
