@@ -129,6 +129,29 @@ test(
 );
 
 test(
+  "independent instances cannot oversubscribe the last daily network reservation",
+  { timeout: 60_000 },
+  async () => {
+    await reserve();
+    const snapshot = await budget.get();
+    const network = snapshot.get("reservations")[0].network;
+    const now = Math.floor(snapshot.readTime.toMillis());
+    await budget.set({
+      reservations: Array.from({ length: 9 }, () => ({
+        at: now - 2 * 60 * 60 * 1000,
+        network,
+      })),
+    });
+    const outcomes = await raceIndependentInstances(["8.8.8.8", "8.8.8.8"]);
+    assert.deepEqual(outcomes.sort(), ["accepted", "resource-exhausted"]);
+    assert.equal((await budget.get()).get("reservations").length, 10);
+    await assert.rejects(reserve(), { code: "resource-exhausted" });
+    await reserve("1.1.1.1");
+    assert.equal((await budget.get()).get("reservations").length, 11);
+  },
+);
+
+test(
   "independent instances cannot oversubscribe the last global reservation",
   { timeout: 60_000 },
   async () => {

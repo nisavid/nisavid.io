@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { after, before, beforeEach, mock, test } from "node:test";
 
 import { http } from "@google-cloud/functions-framework";
@@ -39,6 +41,32 @@ let stored;
 let writes;
 let tokenId = 0;
 const consumed = new Set();
+const errors = [];
+const require = createRequire(import.meta.url);
+const { UNPATCHED_CONSOLE } = require(
+  join(dirname(require.resolve("firebase-functions/logger")), "common.js"),
+);
+mock.method(UNPATCHED_CONSOLE, "error", (line) =>
+  errors.push(JSON.parse(line)),
+);
+const assertQuotaReason = (reason) => {
+  const diagnostic = errors.find((entry) =>
+    entry.message.startsWith("Error: Contact email quota unavailable"),
+  );
+  assert.ok(diagnostic);
+  assert.deepEqual(Object.keys(diagnostic).sort(), [
+    "message",
+    "reason",
+    "severity",
+  ]);
+  assert.equal(diagnostic.severity, "ERROR");
+  assert.equal(diagnostic.reason, reason);
+  assert.equal(
+    diagnostic.message.includes("sensitive provider diagnostic"),
+    false,
+  );
+  assert.equal(JSON.stringify(diagnostic).includes("provider metadata"), false);
+};
 
 // Deterministic storage for boundary and failure tests. Real Firestore
 // contention is exercised separately by the emulator regression test.
@@ -105,6 +133,7 @@ beforeEach(() => {
   stored = undefined;
   writes = 0;
   consumed.clear();
+  errors.length = 0;
   transaction.mock.resetCalls();
   transaction.mock.mockImplementation(transact);
   verifyToken.mock.resetCalls();
@@ -334,6 +363,28 @@ test("the hourly window expires exactly at the Firestore read-time boundary", as
   assert.equal(stored.reservations.at(-1).at, start + hour);
 });
 
+test("a network's daily budget preserves other networks and expires at the rolling boundary", async () => {
+  for (let index = 0; index < 5; index += 1) {
+    await reserveContactEmail(request(), secret);
+  }
+  now = start + hour;
+  for (let index = 0; index < 5; index += 1) {
+    await reserveContactEmail(request(), secret);
+  }
+  now = start + 2 * hour;
+  assertError(await post(), 429, "RESOURCE_EXHAUSTED");
+  assert.equal((await post({ ip: "1.1.1.1" })).status, 200);
+  assert.equal(send.mock.callCount(), 1);
+  assert.equal(writes, 11);
+
+  now = start + day - 1;
+  assertError(await post(), 429, "RESOURCE_EXHAUSTED");
+  now += 1;
+  assert.equal((await post()).status, 200);
+  assert.equal(send.mock.callCount(), 2);
+  assert.equal(stored.reservations.length, 7);
+});
+
 test("the daily window expires exactly at its boundary and removes old records", async () => {
   for (let index = 1; index <= 50; index += 1) {
     await reserveContactEmail(request(`8.8.8.${index}`), secret);
@@ -377,9 +428,12 @@ test("a transaction retry uses its new server timestamp and sends only once", as
 
 test("a Firestore outage fails closed before the mail provider is called", async () => {
   transaction.mock.mockImplementation(async () => {
-    throw new Error("Firestore unavailable");
+    throw Object.assign(new Error("sensitive provider diagnostic"), {
+      code: { untrusted: "provider metadata" },
+    });
   });
   assertError(await post(), 503, "UNAVAILABLE");
+  assertQuotaReason("storage");
   assert.equal(send.mock.callCount(), 0);
   assert.equal(writes, 0);
 });
@@ -413,6 +467,7 @@ for (const [label, state] of [
   test(`corrupt quota state (${label}) fails closed`, async () => {
     stored = structuredClone(state);
     assertError(await post(), 503, "UNAVAILABLE");
+    assertQuotaReason("state");
     assert.equal(send.mock.callCount(), 0);
     assert.equal(writes, 0);
     assert.deepEqual(stored, state);
@@ -422,6 +477,7 @@ for (const [label, state] of [
 test("an invalid server read timestamp fails closed", async () => {
   now = Number.NaN;
   assertError(await post(), 503, "UNAVAILABLE");
+  assertQuotaReason("state");
   assert.equal(send.mock.callCount(), 0);
   assert.equal(writes, 0);
 });
@@ -431,6 +487,7 @@ for (const value of [undefined, "", "x".repeat(31)]) {
     if (value === undefined) delete process.env.CONTACT_RATE_LIMIT_SECRET;
     else process.env.CONTACT_RATE_LIMIT_SECRET = value;
     assertError(await post(), 503, "UNAVAILABLE");
+    assertQuotaReason("configuration");
     assert.equal(transaction.mock.callCount(), 0);
     assert.equal(send.mock.callCount(), 0);
   });
@@ -454,6 +511,7 @@ for (const ip of [
 ]) {
   test(`untrusted forwarding identity ${JSON.stringify(ip)} fails closed`, async () => {
     assertError(await post({ ip }), 503, "UNAVAILABLE");
+    assertQuotaReason("identity");
     assert.equal(transaction.mock.callCount(), 0);
     assert.equal(send.mock.callCount(), 0);
   });

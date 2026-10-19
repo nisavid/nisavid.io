@@ -8,6 +8,7 @@ Each accepted attempt reserves capacity in one Firestore transaction before
 constructing the Mailtrap client:
 
 - At most **5 attempts per upstream network in a rolling hour**.
+- At most **10 attempts per upstream network in a rolling 24 hours**.
 - At most **50 attempts in total in a rolling 24 hours**, across all instances,
   revisions, tokens, and message contents.
 
@@ -25,6 +26,8 @@ Failed deliveries retain their reservation because retrying still incurs work.
 Transaction failures, corrupt state, missing configuration, and invalid source
 addresses fail closed with `unavailable`; exhausted quotas return
 `resource-exhausted`. Do not reset quota state as a routine response to errors.
+Failure logs include a bounded `reason` of `configuration`, `identity`, `state`,
+or `storage`, without recording raw addresses, secrets, or provider diagnostics.
 
 ## Ingress assumption
 

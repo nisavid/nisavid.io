@@ -9,6 +9,7 @@ import * as ipaddr from "ipaddr.js";
 const hour = 60 * 60 * 1000;
 const day = 24 * hour;
 const networkLimit = 5;
+const networkDailyLimit = 10;
 const globalLimit = 50;
 
 interface Reservation {
@@ -98,11 +99,15 @@ export async function reserveContactEmail(
   request: Request,
   secret: string,
 ): Promise<void> {
+  let failureReason: "configuration" | "identity" | "state" | "storage" =
+    "configuration";
   try {
     if (secret.length < 32) throw new Error("Missing quota secret");
+    failureReason = "identity";
     const network = createHmac("sha256", secret)
       .update(callerNetwork(request))
       .digest("hex");
+    failureReason = "storage";
     const db = getFirestore("contact-form");
     const budget = db.doc("contactEmailLimits/budget");
 
@@ -110,6 +115,7 @@ export async function reserveContactEmail(
       const snapshot = await transaction.get(budget);
       // Firestore's read time avoids caller clocks and cross-instance skew.
       // Recalculate it on every transaction retry, not before the transaction.
+      failureReason = "state";
       const now = Math.floor(snapshot.readTime.toMillis());
       const stored: unknown = snapshot.exists
         ? snapshot.get("reservations")
@@ -126,10 +132,13 @@ export async function reserveContactEmail(
       }
 
       const reservations = stored.filter((entry) => entry.at > now - day);
-      const recent = reservations.filter(
-        (entry) => entry.network === network && entry.at > now - hour,
-      );
-      if (reservations.length >= globalLimit || recent.length >= networkLimit) {
+      const daily = reservations.filter((entry) => entry.network === network);
+      const recent = daily.filter((entry) => entry.at > now - hour);
+      if (
+        reservations.length >= globalLimit ||
+        recent.length >= networkLimit ||
+        daily.length >= networkDailyLimit
+      ) {
         throw new HttpsError(
           "resource-exhausted",
           "Too many contact messages. Please try again later.",
@@ -138,6 +147,7 @@ export async function reserveContactEmail(
 
       // One bounded document also caps storage growth from rotating sources.
       // Never send inside the callback: Firestore may run it more than once.
+      failureReason = "storage";
       transaction.set(budget, {
         reservations: [...reservations, { at: now, network }],
       });
@@ -147,7 +157,7 @@ export async function reserveContactEmail(
       Logger.warn("Contact email quota exhausted");
       throw error;
     }
-    Logger.error("Contact email quota unavailable");
+    Logger.error("Contact email quota unavailable", { reason: failureReason });
     throw new HttpsError(
       "unavailable",
       "Contact messages are temporarily unavailable. Please try again later.",
