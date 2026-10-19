@@ -35,13 +35,18 @@ export const sendContactFormEmail = onCall(
       throw new HttpsError("unauthenticated", "App Check token already used.");
     }
 
+    const subject: unknown = request.data?.subject;
+    if (typeof subject !== "string") {
+      throw new HttpsError("invalid-argument", "Subject must be a string");
+    }
+
     // Reserve before constructing the transport. Keep the reservation even if
     // transport construction or delivery fails; retries are still attempts.
     await reserveContactEmail(request.rawRequest, quotaSecret.value());
 
     Logger.info(
       `Received request to send message from ${request.data.name} <${request.data.email}>:`,
-      request.data.subject,
+      subject,
     );
 
     const client = (() => {
@@ -82,7 +87,7 @@ export const sendContactFormEmail = onCall(
       from: { name: request.data.name, email: sender.value() },
       to: [{ email: to.value() }],
       headers: { "Reply-To": `${request.data.name} <${request.data.email}>` },
-      subject: request.data.subject,
+      subject,
       text: request.data.body,
     };
 
@@ -98,7 +103,7 @@ export const sendContactFormEmail = onCall(
 
     Logger.info(
       `Sent message from ${request.data.name} <${request.data.email}>:`,
-      request.data.subject,
+      subject,
     );
   },
 );
