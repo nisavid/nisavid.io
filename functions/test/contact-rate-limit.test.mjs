@@ -42,7 +42,7 @@ const consumed = new Set();
 
 // Deterministic storage for boundary and failure tests. Real Firestore
 // contention is exercised separately by the emulator regression test.
-async function transact(callback) {
+const transact = async (callback) => {
   let staged;
   const result = await callback({
     get: async (reference) => {
@@ -63,7 +63,7 @@ async function transact(callback) {
     writes += 1;
   }
   return result;
-}
+};
 
 const transaction = mock.method(
   getFirestore("contact-form"),
@@ -124,18 +124,18 @@ after(async () => {
   }
 });
 
-function request(ip = "8.8.8.8") {
+const request = (ip = "8.8.8.8") => {
   return {
     headers: ip === undefined ? {} : { "x-forwarded-for": ip },
     socket: { remoteAddress: "1.1.1.1" },
   };
-}
+};
 
-async function post({
+const post = async ({
   token = `fresh-token-${++tokenId}`,
   ip = "8.8.8.8",
   payload = data,
-} = {}) {
+} = {}) => {
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -152,12 +152,12 @@ async function post({
     body: await response.json(),
     headers: response.headers,
   };
-}
+};
 
-function assertError(response, status, code) {
+const assertError = (response, status, code) => {
   assert.equal(response.status, status);
   assert.equal(response.body.error.status, code);
-}
+};
 
 test("preserves a valid callable, CORS, and contact message", async () => {
   const response = await post();
@@ -260,6 +260,36 @@ test("IPv4-mapped IPv6 spellings share the IPv4 quota", async () => {
   }
   assert.equal(writes, 5);
 });
+
+for (const [protocol, addresses] of [
+  ["6to4", ["2002:0808:0808::1", "2002:808:808:ffff::2"]],
+  [
+    "Teredo",
+    [
+      "2001:0:4136:e378:8000:63bf:f7f7:f7f7",
+      "2001:0000:0909:0909:0000:1234:F7F7:F7F7",
+    ],
+  ],
+]) {
+  test(`${protocol} clients share the embedded public IPv4 budget across aliases`, async () => {
+    assert.equal(
+      (await post({ ip: `${addresses[0]}, 169.254.1.1` })).status,
+      200,
+    );
+    for (let index = 0; index < 4; index += 1) {
+      assert.equal((await post({ ip: "8.8.8.8" })).status, 200);
+    }
+    for (const ip of addresses) {
+      assertError(await post({ ip }), 429, "RESOURCE_EXHAUSTED");
+    }
+    assert.equal(send.mock.callCount(), 5);
+    assert.equal(
+      new Set(stored.reservations.map((item) => item.network)).size,
+      1,
+    );
+    assert.equal((await post({ ip: "1.1.1.1" })).status, 200);
+  });
+}
 
 test("IPv6 spelling and interface rotation share a /64, while another /64 is allowed", async () => {
   for (let index = 1; index <= 5; index += 1) {
@@ -419,6 +449,8 @@ for (const ip of [
   "::1",
   "fe80::1%eth0",
   "ff02::1",
+  "2002:0a00:0001::1",
+  "2001:0:4136:e378:8000:63bf:80ff:fffe",
 ]) {
   test(`untrusted forwarding identity ${JSON.stringify(ip)} fails closed`, async () => {
     assertError(await post({ ip }), 503, "UNAVAILABLE");

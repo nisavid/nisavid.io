@@ -34,7 +34,7 @@ after(async () => {
   await deleteApp(app);
 });
 
-function reserve(ip = "8.8.8.8") {
+const reserve = (ip = "8.8.8.8") => {
   return reserveContactEmail(
     {
       headers: { "x-forwarded-for": ip },
@@ -42,7 +42,7 @@ function reserve(ip = "8.8.8.8") {
     },
     secret,
   );
-}
+};
 
 // Each worker owns an independent Firebase app, SDK client and process, as
 // separate function instances do. A barrier starts their transactions together.
@@ -67,7 +67,7 @@ const workerSource = `
   process.disconnect();
 `;
 
-async function raceIndependentInstances(ips) {
+const raceIndependentInstances = async (ips) => {
   const workers = ips.map((ip) => {
     const child = spawn(
       process.execPath,
@@ -114,7 +114,7 @@ async function raceIndependentInstances(ips) {
   } finally {
     for (const worker of workers) worker.child.kill();
   }
-}
+};
 
 test(
   "independent instances cannot oversubscribe the last network reservation",

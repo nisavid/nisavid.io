@@ -11,10 +11,11 @@ constructing the Mailtrap client:
 - At most **50 attempts in total in a rolling 24 hours**, across all instances,
   revisions, tokens, and message contents.
 
-IPv4 addresses and IPv4-mapped IPv6 addresses share a key. Native IPv6 addresses
-share a key within a /64. A dedicated secret HMACs the network identifier; raw
-addresses are not stored. NATs and forwarding proxies share the network budget.
-These are network limits, not authenticated person or device limits.
+IPv4 addresses, IPv4-mapped IPv6 addresses, and 6to4/Teredo addresses carrying
+the same public IPv4 address share a key. Native IPv6 addresses share a key
+within a /64. A dedicated secret HMACs the network identifier; raw addresses are
+not stored. NATs and forwarding proxies share the network budget. These are
+network limits, not authenticated person or device limits.
 
 The named database `contact-form` contains one document,
 `contactEmailLimits/budget`, with at most 50 timestamp/hash pairs. Firestore
@@ -55,7 +56,11 @@ Interactive `functions:shell` use requires a running Firestore emulator and
 ## Deployment
 
 Provision these prerequisites before deploying the function. No production
-database, secret, IAM policy, or provider setting is changed by local tests.
+database, secret, IAM policy, or provider setting is changed by local tests. The
+automatic deployment workflow deploys Hosting and Functions only; complete these
+database, rules, secret, and IAM prerequisites separately before enabling
+`FIREBASE_DEPLOY_ENABLED`, following
+[the deployment guide](../docs/firebase-deployment.md).
 
 1. Inspect the project's databases first. Create a **dedicated** Firestore
    Native database named `contact-form` in `us-central1` (the function's current
@@ -63,26 +68,46 @@ database, secret, IAM policy, or provider setting is changed by local tests.
    it:
 
    ```sh
-   pnpm exec firebase firestore:databases:list
-   pnpm exec firebase firestore:databases:create contact-form --location us-central1
+   pnpm exec firebase firestore:databases:list --project xenon-sentry-395319
+   pnpm exec firebase firestore:databases:create contact-form --location us-central1 --project xenon-sentry-395319
    ```
 
-2. Give the function's runtime service account Firestore data access to this
-   database through IAM, with no browser/client access. Deploy the deny-all
-   client rules in `firestore.contact.rules` before the function:
+2. Grant the runtime service account access only to the dedicated database,
+   using the database-name IAM condition. Inspect existing grants first; do not
+   retain an unconditional project-wide data-access grant as a substitute.
+   Deploy the deny-all client rules before the function:
 
    ```sh
-   pnpm exec firebase deploy --only firestore:contact-form
+   gcloud projects add-iam-policy-binding xenon-sentry-395319 \
+     --member=serviceAccount:475831902992-compute@developer.gserviceaccount.com \
+     --role=roles/datastore.user \
+     --condition="title=contact-form-database,expression=resource.name == 'projects/xenon-sentry-395319/databases/contact-form'"
+   pnpm exec firebase deploy --only firestore:contact-form --project xenon-sentry-395319
    ```
 
-3. Generate a dedicated shared secret, then deploy the function. All active
-   revisions must use the same secret and database; rotating the secret resets
-   network identities but does not reset the global budget.
+3. Generate a dedicated shared secret, then grant the runtime payload access and
+   the GitHub deployment account metadata-only access on this secret. Keep its
+   payload out of GitHub and Codex. All active revisions must use the same
+   secret and database; rotating it resets network identities but does not reset
+   the global budget. Inspect an existing secret before creating another
+   version.
 
    ```sh
-   openssl rand -hex 32 | pnpm exec firebase functions:secrets:set CONTACT_RATE_LIMIT_SECRET --data-file -
-   pnpm exec firebase deploy --only functions:sendContactFormEmail
+   set -euo pipefail
+   openssl rand -hex 32 | pnpm exec firebase functions:secrets:set CONTACT_RATE_LIMIT_SECRET --data-file - --project xenon-sentry-395319
+   gcloud secrets add-iam-policy-binding CONTACT_RATE_LIMIT_SECRET \
+     --project=xenon-sentry-395319 \
+     --member=serviceAccount:475831902992-compute@developer.gserviceaccount.com \
+     --role=roles/secretmanager.secretAccessor
+   gcloud secrets add-iam-policy-binding CONTACT_RATE_LIMIT_SECRET \
+     --project=xenon-sentry-395319 \
+     --member=serviceAccount:github-firebase-deploy@xenon-sentry-395319.iam.gserviceaccount.com \
+     --role=roles/secretmanager.viewer
    ```
+
+   Keep automatic deployment disabled until all reviewed security fixes and
+   prerequisites in the deployment guide are complete. The GitHub workflow then
+   deploys the current `main` through the production environment.
 
 4. Verify one real contact submission and inspect quota state and the ingress
    assumption above. Confirm `MAILTRAP_PASS`, `SENDER`, and `TO` remain
@@ -99,7 +124,8 @@ over availability during contention or an outage.
 
 ## Local verification
 
-Use Node 20 and pnpm 9.15.9. From the repository root:
+Use Node 22, pnpm 9.15.9, and Java 21 or newer for the Firestore emulator. From
+the repository root:
 
 ```sh
 pnpm --dir functions install --frozen-lockfile

@@ -32,36 +32,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     Storage.onStateChange(elm.ports.storedStateChanged.send);
   }
 
-  elm.ports.consoleError.subscribe((args: any[]) => {
+  elm.ports.consoleError.subscribe((args: unknown[]) => {
     console.error(...args);
   });
 
   elm.ports.checkValidity.subscribe((id: string) => {
-    Dom.checkValidity(id).then((validity: ValidityState) => {
-      elm.ports.checkValidityResult.send({
-        id: id,
-        success: true,
-        validity: validity,
-      });
-    }).catch((error) => {
-      elm.ports.checkValidityResult.send({
-        id: id,
-        success: false,
-        error: error,
-      });
-    });
-  });
-
-  elm.ports.callSendContactFormEmail.subscribe(
-    (email: CloudFunctions.ContactFormEmailParams) => {
-      CloudFunctions.callSendContactFormEmail(email).then(() => {
-        elm.ports.callSendContactFormEmailResult.send({ success: true });
-      }).catch((error) => {
-        elm.ports.callSendContactFormEmailResult.send({
+    Dom.checkValidity(id)
+      .then((validity: ValidityState) => {
+        elm.ports.checkValidityResult.send({
+          id: id,
+          success: true,
+          validity: validity,
+        });
+      })
+      .catch((error) => {
+        elm.ports.checkValidityResult.send({
+          id: id,
           success: false,
           error: error,
         });
       });
+  });
+
+  elm.ports.callSendContactFormEmail.subscribe(
+    (email: CloudFunctions.ContactFormEmailParams) => {
+      CloudFunctions.callSendContactFormEmail(email)
+        .then(() => {
+          elm.ports.callSendContactFormEmailResult.send({ success: true });
+        })
+        .catch((error) => {
+          elm.ports.callSendContactFormEmailResult.send({
+            success: false,
+            error: error,
+          });
+        });
     },
   );
 });

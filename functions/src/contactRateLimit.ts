@@ -18,8 +18,8 @@ interface Reservation {
 
 /**
  * Identify the upstream network at the Google-managed callable ingress.
- * @param request - The request after Google's forwarding proxy.
- * @returns A canonical IPv4 address or IPv6 /64 network.
+ * @param {Request} request - The request after Google's forwarding proxy.
+ * @returns {string} A canonical IPv4 address or IPv6 /64 network.
  */
 function callerNetwork(request: Request): string {
   // Firebase's local runtime forwards over a Unix socket, without Google's
@@ -46,7 +46,21 @@ function callerNetwork(request: Request): string {
     throw new Error("Invalid upstream IP");
   }
 
-  const address = ipaddr.process(selected);
+  let address = ipaddr.process(selected);
+  const range = address.range();
+  // Transition IPv6 addresses carry their public IPv4 network. Normalize it
+  // before the public-range check and HMAC so tunnel/subnet/port rotations
+  // cannot create extra budgets. RFC 3056 section 2 and RFC 4380 section 4.
+  if (range === "6to4") {
+    address = new ipaddr.IPv4(address.toByteArray().slice(2, 6));
+  } else if (range === "teredo") {
+    address = new ipaddr.IPv4(
+      address
+        .toByteArray()
+        .slice(12, 16)
+        .map((octet) => octet ^ 0xff),
+    );
+  }
   if (address.range() !== "unicast") throw new Error("Non-public upstream IP");
 
   // IPv4-mapped IPv6 has already been converted by process(). Group native
@@ -58,8 +72,8 @@ function callerNetwork(request: Request): string {
 
 /**
  * Validate stored security state before using it to admit a send.
- * @param value - A stored reservation.
- * @returns Whether the reservation has the expected shape.
+ * @param {unknown} value - A stored reservation.
+ * @returns {boolean} Whether the reservation has the expected shape.
  */
 function isReservation(value: unknown): value is Reservation {
   return (
@@ -77,8 +91,8 @@ function isReservation(value: unknown): value is Reservation {
 
 /**
  * Reserve one contact email attempt atomically across all function instances.
- * @param request - The callable's raw HTTP request.
- * @param secret - The dedicated HMAC secret shared by all instances.
+ * @param {Request} request - The callable's raw HTTP request.
+ * @param {string} secret - The dedicated HMAC secret shared by all instances.
  */
 export async function reserveContactEmail(
   request: Request,

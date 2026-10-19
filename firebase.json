@@ -28,6 +28,7 @@
       "ignore": [
         "node_modules",
         ".git",
+        "**/gha-creds-*.json",
         "firebase-debug.log",
         "firebase-debug.*.log"
       ],

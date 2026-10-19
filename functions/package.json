@@ -11,6 +11,7 @@
     "url": "https://nisavid.io"
   },
   "type": "commonjs",
+  "packageManager": "pnpm@9.15.9",
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc",
@@ -20,7 +21,7 @@
     "deploy": "firebase deploy --only functions",
     "lint": "pnpm run lint:eslint",
     "lint:eslint": "pnpm run lint:eslint: -- .",
-    "lint:eslint:": "eslint --cache",
+    "lint:eslint:": "eslint --cache --max-warnings 0",
     "lint:fix:eslint": "pnpm run lint:fix:eslint: -- .",
     "lint:fix:eslint:": "eslint --cache --fix",
     "lint:fix:prettier": "pnpm run lint:fix:prettier: -- .",
@@ -50,7 +51,13 @@
     "firebase-functions-test": "^3.2.0",
     "typescript": "^5.4.5"
   },
+  "pnpm": {
+    "overrides": {
+      "body-parser@<1.20.8": "^1.20.8"
+    }
+  },
   "engines": {
-    "node": "20"
+    "node": "22",
+    "pnpm": "9.15.9"
   }
 }
