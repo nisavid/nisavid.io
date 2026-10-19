@@ -18,12 +18,12 @@ export interface Info {
 
 /**
  * Get information about the user's device.
- * @returns Information about the user's device.
+ * @returns {Info} Information about the user's device.
  */
 export function getInfo(): Info {
   /**
    * Get the device's preferred color scheme.
-   * @returns The device's preferred color scheme.
+   * @returns {"light" | "dark" | null} The device's preferred color scheme.
    */
   function getPrefersColorScheme(): "light" | "dark" | null {
     if (prefersLightColorSchemeMediaQuery.matches) {
@@ -42,9 +42,9 @@ export function getInfo(): Info {
 
 /**
  * Call a callback when the device's information changes.
- * @param callback - The callback to call when the device's information changes.
+ * @param {(deviceInfo: Info) => void} callback - The callback to call when the device's information changes.
  */
-export function onInfoChange(callback: (deviceInfo: Info) => any) {
+export function onInfoChange(callback: (deviceInfo: Info) => void) {
   /**
    * Call the callback with the device information.
    */

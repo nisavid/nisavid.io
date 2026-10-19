@@ -54,6 +54,13 @@ export default [
     // Preserve the presets' narrower TypeScript-only overrides.
     files: config.files ?? ["**/*.{js,cjs,mjs,jsx,ts,cts,mts,tsx}"],
   })),
+  {
+    files: ["**/*.cjs"],
+    rules: {
+      // CommonJS build tools load dependencies synchronously with require().
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
   ...compat.plugins("editorconfig"),
   editorconfig.configs.all,
   ...compat.config(jsonc.configs.base),
