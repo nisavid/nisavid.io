@@ -444,9 +444,11 @@ or a live deployment. Local and GitHub Actions results are separate evidence.
    policy; the operator handoff does not establish either. Review the legacy
    App Engine Editor access described above. If adopting PR **#7**, also
    provision and verify its dedicated `contact-form` Firestore database, client
-   deny rules, `CONTACT_RATE_LIMIT_SECRET`, and required scoped IAM; verify the
-   trusted ingress chain used for network rate limits. The workflow deploys
-   only Hosting and Functions, so it does not provision those Firestore rules.
+   deny rules, `CONTACT_RATE_LIMIT_SECRET`, and the database-conditioned runtime
+   and secret-level runtime/deployer IAM grants in
+   [PR #7's deployment specification](https://github.com/nisavid/nisavid.io/blob/f99552607ed023f51993ab9519315ee87261e17c/functions/README.md#deployment).
+   Verify the trusted ingress chain used for network rate limits. The workflow
+   deploys only Hosting and Functions, so it does not provision those Firestore rules.
    Preserve the existing public callable invocation policy and Secret Manager
    runtime access. Recheck WIF and the GitHub environment before activation.
 5. After these prerequisites are complete and production activation is
