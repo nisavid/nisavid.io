@@ -1,13 +1,15 @@
 {
+  "firestore": [
+    {
+      "database": "contact-form",
+      "rules": "firestore.contact.rules"
+    }
+  ],
   "hosting": {
     "cleanUrls": true,
     "trailingSlash": false,
     "public": "dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "/robots.txt",
