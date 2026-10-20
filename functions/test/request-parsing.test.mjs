@@ -6,6 +6,7 @@ import { gzipSync } from "node:zlib";
 import { http } from "@google-cloud/functions-framework";
 import { getTestServer } from "@google-cloud/functions-framework/testing";
 import { getAppCheck } from "firebase-admin/app-check";
+import { getFirestore } from "firebase-admin/firestore";
 import { MailtrapClient } from "mailtrap";
 
 import { sendContactFormEmail } from "../lib/index.js";
@@ -30,6 +31,23 @@ const verifyToken = mock.method(
     return { appId: "test-app", token: {}, alreadyConsumed: false };
   },
 );
+// Keep the parser integration control isolated from real quota storage.
+// Dedicated limiter tests exercise reservation state and concurrent admission.
+const transaction = mock.method(
+  getFirestore("contact-form"),
+  "runTransaction",
+  async (callback) =>
+    callback({
+      get: async () => ({
+        exists: false,
+        readTime: { toMillis: () => 1_800_000_000_000 },
+      }),
+      set: (reference, value) => {
+        assert.equal(reference.path, "contactEmailLimits/budget");
+        assert.equal(value.reservations.length, 1);
+      },
+    }),
+);
 const send = mock.method(MailtrapClient.prototype, "send", async () => ({
   success: true,
   message_ids: ["test-message"],
@@ -39,6 +57,7 @@ http("contact-form-parser-test", callable);
 const server = getTestServer("contact-form-parser-test");
 let url;
 const environment = {
+  CONTACT_RATE_LIMIT_SECRET: "parser-test-quota-secret-32-characters",
   MAILTRAP_PASS: "test-mailtrap-token",
   SENDER: "sender@example.com",
   TO: "recipient@example.com",
@@ -58,6 +77,7 @@ beforeEach(() => {
   callable.mock.resetCalls();
   verifyToken.mock.resetCalls();
   send.mock.resetCalls();
+  transaction.mock.resetCalls();
 });
 
 after(async () => {
@@ -95,6 +115,7 @@ for (const [name, body, headers] of [
     assert.equal(callable.mock.callCount(), 0);
     assert.equal(verifyToken.mock.callCount(), 0);
     assert.equal(send.mock.callCount(), 0);
+    assert.equal(transaction.mock.callCount(), 0);
   });
 }
 
@@ -128,6 +149,7 @@ for (const token of [undefined, "invalid-test-token"]) {
     assert.equal(callable.mock.callCount(), 1);
     assert.equal(verifyToken.mock.callCount(), token ? 1 : 0);
     assert.equal(send.mock.callCount(), 0);
+    assert.equal(transaction.mock.callCount(), 0);
   });
 }
 
@@ -137,6 +159,7 @@ test("preserves a valid JSON contact request and consumes its App Check token", 
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "X-Firebase-AppCheck": "test-app-check-token",
+      "X-Forwarded-For": "8.8.8.8",
       Origin: "https://nisavid.io",
     },
     body: JSON.stringify({ data }),
@@ -151,6 +174,7 @@ test("preserves a valid JSON contact request and consumes its App Check token", 
   assert.equal(callable.mock.callCount(), 1);
   assert.equal(verifyToken.mock.callCount(), 1);
   assert.equal(send.mock.callCount(), 1);
+  assert.equal(transaction.mock.callCount(), 1);
   assert.deepEqual(send.mock.calls[0].arguments, [
     {
       from: { name: data.name, email: environment.SENDER },

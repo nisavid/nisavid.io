@@ -31,14 +31,16 @@
     "logs": "firebase functions:log",
     "release": "pnpm run deploy",
     "start": "pnpm run start:serve",
-    "start:serve": "pnpm run build && firebase emulators:start --only functions",
+    "start:serve": "pnpm run build && firebase emulators:start --only functions,firestore",
     "start:shell": "pnpm run build && firebase functions:shell",
-    "test": "pnpm run build && node --test test/*.test.mjs"
+    "test": "pnpm run build && node --test test/*.test.mjs",
+    "test:emulator": "pnpm run build && node --test test/emulator/*.test.mjs"
   },
   "dependencies": {
     "@google-cloud/functions-framework": "^3.4.0",
     "firebase-admin": "^12.1.1",
     "firebase-functions": "^5.0.1",
+    "ipaddr.js": "^2.2.0",
     "mailtrap": "^3.3.0"
   },
   "devDependencies": {

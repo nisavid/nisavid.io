@@ -5,9 +5,12 @@ import * as Params from "firebase-functions/params";
 
 import { Mail, MailtrapClient } from "mailtrap";
 
+import { reserveContactEmail } from "./contactRateLimit";
+
 Admin.initializeApp();
 
 const mailtrapToken = Params.defineSecret("MAILTRAP_PASS");
+const quotaSecret = Params.defineSecret("CONTACT_RATE_LIMIT_SECRET");
 const sender = Params.defineString("SENDER");
 const to = Params.defineString("TO");
 
@@ -23,13 +26,23 @@ export const sendContactFormEmail = onCall(
     cors: true,
     enforceAppCheck: true,
     consumeAppCheckToken: true,
-    secrets: [mailtrapToken],
+    secrets: [mailtrapToken, quotaSecret],
+    maxInstances: 2,
   },
   async (request) => {
+    // The SDK consumes the token but leaves rejection of replays to us.
+    if (request.app?.alreadyConsumed) {
+      throw new HttpsError("unauthenticated", "App Check token already used.");
+    }
+
     const subject: unknown = request.data?.subject;
     if (typeof subject !== "string") {
       throw new HttpsError("invalid-argument", "Subject must be a string");
     }
+
+    // Reserve before constructing the transport. Keep the reservation even if
+    // transport construction or delivery fails; retries are still attempts.
+    await reserveContactEmail(request.rawRequest, quotaSecret.value());
 
     Logger.info(
       `Received request to send message from ${request.data.name} <${request.data.email}>:`,

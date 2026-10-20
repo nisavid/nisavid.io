@@ -7,6 +7,7 @@ import { after, before, beforeEach, mock, test } from "node:test";
 import { http } from "@google-cloud/functions-framework";
 import { getTestServer } from "@google-cloud/functions-framework/testing";
 import { getAppCheck } from "firebase-admin/app-check";
+import { getFirestore } from "firebase-admin/firestore";
 import { MailtrapClient } from "mailtrap";
 
 import { sendContactFormEmail } from "../lib/index.js";
@@ -27,6 +28,22 @@ const verifyToken = mock.method(getAppCheck(), "verifyToken", async () => ({
   token: {},
   alreadyConsumed: false,
 }));
+// Isolate quota storage while exercising the real callable and logger.
+const transaction = mock.method(
+  getFirestore("contact-form"),
+  "runTransaction",
+  async (callback) =>
+    callback({
+      get: async () => ({
+        exists: false,
+        readTime: { toMillis: () => 1_800_000_000_000 },
+      }),
+      set: (reference, value) => {
+        assert.equal(reference.path, "contactEmailLimits/budget");
+        assert.equal(value.reservations.length, 1);
+      },
+    }),
+);
 const send = mock.method(MailtrapClient.prototype, "send", async () => ({
   success: true,
   message_ids: ["test-message"],
@@ -46,6 +63,7 @@ const metadata = {
   attackerMarker: "forged",
 };
 const environment = {
+  CONTACT_RATE_LIMIT_SECRET: "logging-test-quota-secret-32-characters",
   MAILTRAP_PASS: "test-mailtrap-token",
   SENDER: "sender@example.com",
   TO: "recipient@example.com",
@@ -68,6 +86,7 @@ beforeEach(() => {
   entries.length = 0;
   verifyToken.mock.resetCalls();
   send.mock.resetCalls();
+  transaction.mock.resetCalls();
 });
 
 after(async () => {
@@ -93,6 +112,7 @@ async function request(body, token = "test-app-check-token") {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "X-Forwarded-For": "8.8.8.8",
       ...(token ? { "X-Firebase-AppCheck": token } : {}),
     },
     body: JSON.stringify(body),
@@ -124,6 +144,7 @@ for (const [name, subject] of [
     assert.equal(response.status, 400);
     assert.equal((await response.json()).error.status, "INVALID_ARGUMENT");
     assert.equal(send.mock.callCount(), 0);
+    assert.equal(transaction.mock.callCount(), 0);
     assert.equal(
       entries.filter((entry) => entry.severity === "INFO").length,
       0,
@@ -141,6 +162,7 @@ test("rejects an inherited object subject created by callable decoding", async (
   assert.equal(response.status, 400);
   assert.equal((await response.json()).error.status, "INVALID_ARGUMENT");
   assert.equal(send.mock.callCount(), 0);
+  assert.equal(transaction.mock.callCount(), 0);
   assertNoInjectedMetadata();
 });
 
@@ -149,6 +171,7 @@ test("rejects null callable data without application logging or mail", async () 
   assert.equal(response.status, 400);
   assert.equal((await response.json()).error.status, "INVALID_ARGUMENT");
   assert.equal(send.mock.callCount(), 0);
+  assert.equal(transaction.mock.callCount(), 0);
   assert.equal(entries.filter((entry) => entry.severity === "INFO").length, 0);
 });
 
@@ -169,6 +192,7 @@ for (const [name, subject] of [
     assert.equal(response.status, 500);
     assert.equal((await response.json()).error.status, "INTERNAL");
     assert.equal(send.mock.callCount(), 0);
+    assert.equal(transaction.mock.callCount(), 0);
     assert.ok(entries.some((entry) => entry.severity === "ERROR"));
     assertNoInjectedMetadata();
   });
@@ -181,6 +205,7 @@ test("SDK rejection of a typed object in an unused field cannot inject metadata"
   assert.equal(response.status, 500);
   assert.equal((await response.json()).error.status, "INTERNAL");
   assert.equal(send.mock.callCount(), 0);
+  assert.equal(transaction.mock.callCount(), 0);
   assertNoInjectedMetadata();
 });
 
@@ -190,6 +215,7 @@ test("SDK rejects a missing data envelope without injecting pre-auth metadata", 
   assert.equal((await response.json()).error.status, "INVALID_ARGUMENT");
   assert.equal(verifyToken.mock.callCount(), 0);
   assert.equal(send.mock.callCount(), 0);
+  assert.equal(transaction.mock.callCount(), 0);
   assert.ok(entries.some((entry) => entry.severity === "WARNING"));
   assertNoInjectedMetadata();
 });
@@ -204,6 +230,7 @@ for (const subject of [
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { result: null });
     assert.equal(send.mock.callCount(), 1);
+    assert.equal(transaction.mock.callCount(), 1);
     assert.equal(send.mock.calls[0].arguments[0].subject, subject);
     const applicationLogs = entries.filter(
       (entry) => entry.severity === "INFO",
@@ -225,6 +252,7 @@ test("preserves mail delivery errors without logging successful delivery", async
   assert.equal(response.status, 500);
   assert.equal((await response.json()).error.status, "UNKNOWN");
   assert.equal(send.mock.callCount(), 1);
+  assert.equal(transaction.mock.callCount(), 1);
   const applicationLogs = entries.filter((entry) => entry.severity === "INFO");
   assert.equal(applicationLogs.length, 1);
   assert.ok(applicationLogs[0].message.startsWith("Received request"));

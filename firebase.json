@@ -1,4 +1,10 @@
 {
+  "firestore": [
+    {
+      "database": "contact-form",
+      "rules": "firestore.contact.rules"
+    }
+  ],
   "hosting": {
     "cleanUrls": true,
     "trailingSlash": false,
@@ -22,6 +28,7 @@
       "ignore": [
         "node_modules",
         ".git",
+        ".secret.local",
         "**/gha-creds-*.json",
         "firebase-debug.log",
         "firebase-debug.*.log"

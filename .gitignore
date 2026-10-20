@@ -1,6 +1,7 @@
 **/*.log
 **/.DS_Store/
 **/.env*
+**/.secret.local
 **/gha-creds-*.json
 **/elm-stuff/
 **/node_modules/
