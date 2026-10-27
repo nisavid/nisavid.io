@@ -3,6 +3,8 @@ import { once } from "node:events";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { after, before, beforeEach, mock, test } from "node:test";
+import { format } from "node:util";
+import { gzipSync } from "node:zlib";
 
 import { http } from "@google-cloud/functions-framework";
 import { getTestServer } from "@google-cloud/functions-framework/testing";
@@ -23,6 +25,10 @@ for (const level of ["debug", "info", "warn", "error"]) {
     entries.push(JSON.parse(line));
   });
 }
+// Express parser failures precede the callable and use console.error directly.
+mock.method(console, "error", (...args) => {
+  entries.push({ severity: "ERROR", message: format(...args) });
+});
 const verifyToken = mock.method(getAppCheck(), "verifyToken", async () => ({
   appId: "test-app",
   token: {},
@@ -103,7 +109,7 @@ after(async () => {
 
 /**
  * Submit JSON through the real callable HTTP boundary.
- * @param {unknown} body - The callable envelope.
+ * @param {unknown} body - The callable envelope, or raw malformed JSON bytes.
  * @param {string|null} token - The mock App Check token, or null to omit it.
  * @returns {Promise<Response>} The HTTP response.
  */
@@ -113,9 +119,13 @@ async function request(body, token = "test-app-check-token") {
     headers: {
       "Content-Type": "application/json",
       "X-Forwarded-For": "8.8.8.8",
+      ...(Buffer.isBuffer(body) ? { "Content-Encoding": "gzip" } : {}),
       ...(token ? { "X-Firebase-AppCheck": token } : {}),
     },
-    body: JSON.stringify(body),
+    body:
+      typeof body === "string" || Buffer.isBuffer(body)
+        ? body
+        : JSON.stringify(body),
     signal: AbortSignal.timeout(5000),
   });
 }
@@ -127,6 +137,76 @@ function assertNoInjectedMetadata() {
       assert.notDeepEqual(entry[key], value, `injected ${key}`);
     }
   }
+}
+
+/**
+ * Check all serialized logger output, including SDK diagnostics.
+ * @param {string[]} values - Private values that must not enter logs.
+ */
+function assertNoPrivateData(values = Object.values(data)) {
+  const output = JSON.stringify(entries);
+  for (const value of [...values, ...Object.values(environment)]) {
+    if (value) {
+      assert.ok(
+        !output.includes(JSON.stringify(value).slice(1, -1)),
+        `logged private value: ${value}`,
+      );
+    }
+  }
+}
+
+/**
+ * Check application events and their shared server-generated correlation ID.
+ * @param {string[]} outcomes - Expected lifecycle outcomes.
+ * @returns {object[]} The application log entries.
+ */
+function assertAttemptLogs(outcomes) {
+  const logs = entries.filter(
+    (entry) =>
+      entry.message === "Contact email attempt" ||
+      entry.message.startsWith("Error: Contact email attempt\n"),
+  );
+  assert.deepEqual(
+    logs.map((entry) => entry.outcome),
+    outcomes,
+  );
+  for (const entry of logs) {
+    assert.match(
+      entry.requestId,
+      /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/,
+    );
+    assert.equal(entry.requestId, logs[0].requestId);
+    assert.deepEqual(
+      Object.keys(entry).sort(),
+      entry.outcome === "failed"
+        ? ["message", "outcome", "reason", "requestId", "severity"]
+        : ["message", "outcome", "requestId", "severity"],
+    );
+    assert.equal(entry.severity, entry.outcome === "failed" ? "ERROR" : "INFO");
+  }
+  assertNoPrivateData();
+  return logs;
+}
+
+for (const [name, body] of [
+  ["plain malformed", '{"data":{"name":Ada}}'],
+  ["compressed malformed", gzipSync('{"data":{"name":Ada}}')],
+  ["strict primitive", '"Ada"'],
+]) {
+  test(`redacts ${name} JSON diagnostics`, async () => {
+    const response = await request(body, null);
+    assert.equal(response.status, 400);
+    await response.text();
+    // Express defers its final error logger until after sending the response.
+    await new Promise(setImmediate);
+    assert.equal(verifyToken.mock.callCount(), 0);
+    assert.equal(send.mock.callCount(), 0);
+    assert.equal(transaction.mock.callCount(), 0);
+    assert.ok(
+      entries.some((entry) => entry.message === "Invalid JSON request body."),
+    );
+    assertNoPrivateData(["Ada"]);
+  });
 }
 
 for (const [name, subject] of [
@@ -141,6 +221,7 @@ for (const [name, subject] of [
   test(`rejects ${name} subject before application logs or mail`, async () => {
     const response = await request({ data: { ...data, subject } });
     assertNoInjectedMetadata();
+    assertNoPrivateData();
     assert.equal(response.status, 400);
     assert.equal((await response.json()).error.status, "INVALID_ARGUMENT");
     assert.equal(send.mock.callCount(), 0);
@@ -150,6 +231,7 @@ for (const [name, subject] of [
       0,
     );
     assertNoInjectedMetadata();
+    assertNoPrivateData();
   });
 }
 
@@ -164,6 +246,7 @@ test("rejects an inherited object subject created by callable decoding", async (
   assert.equal(send.mock.callCount(), 0);
   assert.equal(transaction.mock.callCount(), 0);
   assertNoInjectedMetadata();
+  assertNoPrivateData();
 });
 
 test("rejects null callable data without application logging or mail", async () => {
@@ -195,22 +278,24 @@ for (const [name, subject] of [
     assert.equal(transaction.mock.callCount(), 0);
     assert.ok(entries.some((entry) => entry.severity === "ERROR"));
     assertNoInjectedMetadata();
+    assertNoPrivateData();
   });
 }
 
 test("SDK rejection of a typed object in an unused field cannot inject metadata", async () => {
   const response = await request({
-    data: { ...data, extra: { "@type": "unknown", ...metadata } },
+    data: { ...data, extra: { "@type": "unknown", ...metadata, ...data } },
   });
   assert.equal(response.status, 500);
   assert.equal((await response.json()).error.status, "INTERNAL");
   assert.equal(send.mock.callCount(), 0);
   assert.equal(transaction.mock.callCount(), 0);
   assertNoInjectedMetadata();
+  assertNoPrivateData();
 });
 
 test("SDK rejects a missing data envelope without injecting pre-auth metadata", async () => {
-  const response = await request(metadata, null);
+  const response = await request({ ...metadata, ...data }, null);
   assert.equal(response.status, 400);
   assert.equal((await response.json()).error.status, "INVALID_ARGUMENT");
   assert.equal(verifyToken.mock.callCount(), 0);
@@ -218,6 +303,7 @@ test("SDK rejects a missing data envelope without injecting pre-auth metadata", 
   assert.equal(transaction.mock.callCount(), 0);
   assert.ok(entries.some((entry) => entry.severity === "WARNING"));
   assertNoInjectedMetadata();
+  assertNoPrivateData();
 });
 
 for (const subject of [
@@ -231,30 +317,91 @@ for (const subject of [
     assert.deepEqual(await response.json(), { result: null });
     assert.equal(send.mock.callCount(), 1);
     assert.equal(transaction.mock.callCount(), 1);
-    assert.equal(send.mock.calls[0].arguments[0].subject, subject);
-    const applicationLogs = entries.filter(
-      (entry) => entry.severity === "INFO",
-    );
-    assert.equal(applicationLogs.length, 2);
-    for (const entry of applicationLogs) {
-      assert.deepEqual(Object.keys(entry).sort(), ["message", "severity"]);
-      assert.ok(entry.message.includes(subject));
-    }
+    assert.deepEqual(send.mock.calls[0].arguments, [
+      {
+        from: { name: data.name, email: environment.SENDER },
+        to: [{ email: environment.TO }],
+        headers: { "Reply-To": `${data.name} <${data.email}>` },
+        subject,
+        text: data.body,
+      },
+    ]);
+    assertAttemptLogs(["received", "sent"]);
+    assertNoPrivateData(Object.values({ ...data, subject }));
     assertNoInjectedMetadata();
+    assertNoPrivateData();
   });
 }
 
 test("preserves mail delivery errors without logging successful delivery", async () => {
   send.mock.mockImplementationOnce(async () => {
-    throw new Error("Test mail provider failure");
+    throw new Error(
+      `Provider failure: ${Object.values(data).join(" ")} ${environment.MAILTRAP_PASS}`,
+    );
   });
   const response = await request({ data });
   assert.equal(response.status, 500);
   assert.equal((await response.json()).error.status, "UNKNOWN");
   assert.equal(send.mock.callCount(), 1);
   assert.equal(transaction.mock.callCount(), 1);
-  const applicationLogs = entries.filter((entry) => entry.severity === "INFO");
-  assert.equal(applicationLogs.length, 1);
-  assert.ok(applicationLogs[0].message.startsWith("Received request"));
+  const logs = assertAttemptLogs(["received", "failed"]);
+  assert.equal(logs[1].reason, "delivery");
   assertNoInjectedMetadata();
+  assertNoPrivateData();
+});
+
+test("SDK rejects private extra envelope keys without logging them", async () => {
+  const response = await request({ data, [data.email]: data.body }, null);
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).error.status, "INVALID_ARGUMENT");
+  assert.equal(verifyToken.mock.callCount(), 0);
+  assert.equal(send.mock.callCount(), 0);
+  assert.equal(transaction.mock.callCount(), 0);
+  assertNoPrivateData();
+});
+
+test("keeps transport construction failures out of logs", async (t) => {
+  const axios = createRequire(require.resolve("mailtrap"))("axios");
+  t.mock.method(axios, "create", () => {
+    throw new Error(
+      `Transport failure: ${Object.values(data).join(" ")} ${environment.MAILTRAP_PASS}`,
+    );
+  });
+  const response = await request({ data });
+  assert.equal(response.status, 500);
+  assert.equal((await response.json()).error.status, "UNKNOWN");
+  assert.equal(send.mock.callCount(), 0);
+  assert.equal(transaction.mock.callCount(), 1);
+  const logs = assertAttemptLogs(["received", "failed"]);
+  assert.equal(logs[1].reason, "transport");
+  assertNoInjectedMetadata();
+});
+
+test("preserves the fallback for a falsy delivery rejection", async () => {
+  send.mock.mockImplementationOnce(async () => {
+    throw null;
+  });
+  const response = await request({ data });
+  assert.equal(response.status, 500);
+  assert.deepEqual((await response.json()).error, {
+    status: "UNKNOWN",
+    message: "Failed to send mail",
+  });
+  assert.equal(send.mock.callCount(), 1);
+  assert.equal(transaction.mock.callCount(), 1);
+  const logs = assertAttemptLogs(["received", "failed"]);
+  assert.equal(logs[1].reason, "delivery");
+});
+
+test("assigns an independent correlation ID to each request", async () => {
+  const first = await request({ data });
+  assert.equal(first.status, 200);
+  await first.json();
+  const firstId = assertAttemptLogs(["received", "sent"])[0].requestId;
+  entries.length = 0;
+  const second = await request({ data });
+  assert.equal(second.status, 200);
+  await second.json();
+  const secondId = assertAttemptLogs(["received", "sent"])[0].requestId;
+  assert.notEqual(firstId, secondId);
 });

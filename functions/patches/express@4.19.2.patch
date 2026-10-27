@@ -1,0 +1,17 @@
+diff --git a/lib/application.js b/lib/application.js
+index ebb30b5..0c31207 100644
+--- a/lib/application.js
++++ b/lib/application.js
+@@ -644,7 +644,11 @@ app.listen = function listen() {
+ 
+ function logerror(err) {
+   /* istanbul ignore next */
+-  if (this.get('env') !== 'test') console.error(err.stack || err.toString());
++  if (this.get('env') !== 'test') {
++    console.error(err.type === 'entity.parse.failed'
++      ? 'Invalid JSON request body.'
++      : err.stack || err.toString());
++  }
+ }
+ 
+ /**
