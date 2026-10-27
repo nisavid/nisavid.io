@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import * as Admin from "firebase-admin";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import * as Logger from "firebase-functions/logger";
@@ -44,10 +46,9 @@ export const sendContactFormEmail = onCall(
     // transport construction or delivery fails; retries are still attempts.
     await reserveContactEmail(request.rawRequest, quotaSecret.value());
 
-    Logger.info(
-      `Received request to send message from ${request.data.name} <${request.data.email}>:`,
-      subject,
-    );
+    // Only server-generated identifiers and fixed categories enter logs.
+    const requestId = randomUUID();
+    Logger.info("Contact email attempt", { requestId, outcome: "received" });
 
     const client = (() => {
       try {
@@ -55,6 +56,11 @@ export const sendContactFormEmail = onCall(
           token: mailtrapToken.value(),
         });
       } catch (err) {
+        Logger.error("Contact email attempt", {
+          requestId,
+          outcome: "failed",
+          reason: "transport",
+        });
         if (err) {
           throw new HttpsError("unknown", err.toString(), err);
         } else {
@@ -94,6 +100,11 @@ export const sendContactFormEmail = onCall(
     try {
       await client.send(message);
     } catch (err) {
+      Logger.error("Contact email attempt", {
+        requestId,
+        outcome: "failed",
+        reason: "delivery",
+      });
       if (err) {
         throw new HttpsError("unknown", err.toString(), err);
       } else {
@@ -101,9 +112,6 @@ export const sendContactFormEmail = onCall(
       }
     }
 
-    Logger.info(
-      `Sent message from ${request.data.name} <${request.data.email}>:`,
-      subject,
-    );
+    Logger.info("Contact email attempt", { requestId, outcome: "sent" });
   },
 );

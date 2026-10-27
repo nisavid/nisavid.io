@@ -4,6 +4,15 @@
 format. App Check is required, limited-use tokens are consumed, and a token
 reported as already consumed is rejected before reserving capacity.
 
+Contact fields and message contents are sent to the configured mailbox, without
+being copied into application logs. Admitted attempts emit a generated
+`requestId` and a fixed `received`, `sent`, or `failed` outcome. Failures
+include only a `transport` or `delivery` reason; provider errors are not logged.
+Pinned SDK and Express patches also omit request payloads, unexpected envelope
+keys, and malformed JSON excerpts from diagnostics. Existing client-facing
+errors are unchanged. Historical logs, retention, exports, and IAM are not
+changed.
+
 Each accepted attempt reserves capacity in one Firestore transaction before
 constructing the Mailtrap client:
 
