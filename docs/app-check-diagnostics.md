@@ -15,11 +15,11 @@ to the old image.
 ## Data and limits
 
 The observer runs immediately before the existing replay guard. It records only
-attested calls whose decoded subject is `null`, while a server-configured window
-is active. The message is `[DEBUG-app-check-replay]`. Fields describe the SDK's
-`alreadyConsumed` property and a domain-separated HMAC-SHA256 fingerprint of the
-actual received App Check header. The key is the existing quota secret. Changing
-the expiry changes the fingerprint domain.
+attested calls whose request payload `subject` field is `null`, while a
+server-configured window is active. The message is `[DEBUG-app-check-replay]`.
+Fields describe the SDK's `alreadyConsumed` property and a domain-separated
+HMAC-SHA256 fingerprint of the actual received App Check header. The key is the
+existing quota secret. Changing the expiry changes the fingerprint domain.
 
 No raw tokens, decoded token claims, request bodies, IP addresses, email fields,
 or secrets are logged. Fingerprints belong in restricted operational logs;
@@ -54,8 +54,8 @@ new IAM grants or operator impersonation are required by this observer.
 
 ## Interpretation and cleanup
 
-For an explicitly authorized pair of invalid-subject requests, compare only the
-private token fingerprints and recorded SDK state:
+For an explicitly authorized pair of requests whose payload `subject` field is
+`null`, compare only the private token fingerprints and recorded SDK state:
 
 - Different fingerprints: the server received different token bytes; review the
   capture path before attributing a backend replay failure.
