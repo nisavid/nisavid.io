@@ -11,7 +11,8 @@ matching the browser's maxlengths. UTF-8 sizes are bounded at three times those
 limits so valid Unicode text remains usable. Malformed Unicode, blank fields,
 and control characters are rejected with `invalid-argument`; tabs and CR/LF are
 allowed in the message body. Accepted content is preserved without trimming.
-The email must be one ASCII mailbox with a dotted domain. The `Reply-To`
+The email must be one ASCII mailbox with a dotted domain and a local part of at
+most 64 bytes. The `Reply-To`
 display name is quoted and escaped; configured envelope addresses stay fixed.
 Invalid payloads do not reserve quota or construct a mail transport.
 

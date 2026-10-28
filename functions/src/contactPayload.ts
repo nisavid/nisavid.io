@@ -76,7 +76,8 @@ export function validateContactPayload(input: unknown): ContactPayload {
   // No whitespace, address lists, display names, comments, or quoted local part.
   const mailbox =
     /^[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
-  if (!mailbox.test(data.email)) {
+  // The ASCII local part is also bounded by RFC 5321 section 4.5.3.1.1.
+  if (!mailbox.test(data.email) || data.email.indexOf("@") > 64) {
     throw new HttpsError("invalid-argument", "Invalid contact email.");
   }
   return data;

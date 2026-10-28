@@ -299,3 +299,8 @@ test("accepts ordinary mailbox punctuation and dotted domain labels", () =>
     { ...data, email: "first.last+tag@sub-domain.example.com" },
     '"Test Sender" <first.last+tag@sub-domain.example.com>',
   ));
+
+for (const length of [65, 100]) {
+  test(`rejects a ${length}-byte email local part before quota access`, () =>
+    assertRejected({ ...data, email: "a".repeat(length) + "@example.com" }));
+}
