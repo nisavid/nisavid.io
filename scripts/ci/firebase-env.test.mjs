@@ -21,11 +21,56 @@ const configuration = {
   FIREBASE_FUNCTIONS_TO: "owner@example.com",
 };
 
-test("writes only the required non-secret Functions parameters", () => {
+test("writes non-secret Functions parameters with diagnostics disabled", () => {
   assert.equal(
     firebaseEnvironment(configuration, project),
-    'SENDER="contact@example.com"\nTO="owner@example.com"\n',
+    'SENDER="contact@example.com"\nTO="owner@example.com"\nCONTACT_APP_CHECK_DIAGNOSTICS_UNTIL=""\n',
   );
+});
+
+test("permits a bounded diagnostic window and preserves expired windows as inactive", () => {
+  const now = Date.parse("2026-10-28T18:00:00.000Z");
+  for (const until of [
+    "2026-10-28T17:00:00.000Z",
+    "2026-10-28T18:00:00.000Z",
+    "2026-10-28T19:00:00.000Z",
+  ]) {
+    const output = firebaseEnvironment(
+      {
+        ...configuration,
+        FIREBASE_FUNCTIONS_APP_CHECK_DIAGNOSTICS_UNTIL: until,
+      },
+      project,
+      now,
+    );
+    assert.ok(
+      output.endsWith(`CONTACT_APP_CHECK_DIAGNOSTICS_UNTIL="${until}"\n`),
+    );
+  }
+});
+
+test("rejects malformed, injected, or excessive diagnostic windows", () => {
+  const now = Date.parse("2026-10-28T18:00:00.000Z");
+  for (const until of [
+    "true",
+    "2026-02-30T18:00:00.000Z",
+    "2026-10-28T19:00:00.001Z",
+    "2026-10-28T18:30:00.000Z\nUNEXPECTED=entry",
+    "2026-10-28T14:30:00.000-04:00",
+  ]) {
+    assert.throws(
+      () =>
+        firebaseEnvironment(
+          {
+            ...configuration,
+            FIREBASE_FUNCTIONS_APP_CHECK_DIAGNOSTICS_UNTIL: until,
+          },
+          project,
+          now,
+        ),
+      /FIREBASE_FUNCTIONS_APP_CHECK_DIAGNOSTICS_UNTIL/u,
+    );
+  }
 });
 
 test("requires every configuration value before deployment", () => {
