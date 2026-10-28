@@ -9,6 +9,7 @@ import { Mail, MailtrapClient } from "mailtrap";
 
 import { reserveContactEmail } from "./contactRateLimit";
 import { validateContactPayload } from "./contactPayload";
+import { createAppCheckDiagnostics } from "./appCheckDiagnostics";
 
 Admin.initializeApp();
 
@@ -16,6 +17,7 @@ const mailtrapToken = Params.defineSecret("MAILTRAP_PASS");
 const quotaSecret = Params.defineSecret("CONTACT_RATE_LIMIT_SECRET");
 const sender = Params.defineString("SENDER");
 const to = Params.defineString("TO");
+const observeAppCheck = createAppCheckDiagnostics();
 
 /**
  * Send an email from the contact form.
@@ -33,6 +35,7 @@ export const sendContactFormEmail = onCall(
     maxInstances: 2,
   },
   async (request) => {
+    observeAppCheck(request, () => process.env.CONTACT_RATE_LIMIT_SECRET ?? "");
     // The SDK consumes the token but leaves rejection of replays to us.
     if (request.app?.alreadyConsumed) {
       throw new HttpsError("unauthenticated", "App Check token already used.");

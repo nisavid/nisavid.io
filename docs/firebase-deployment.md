@@ -328,10 +328,15 @@ are embedded in the delivered browser bundle and are not server credentials.
 Verify the reCAPTCHA Enterprise key permits the production domain and matches
 the App Check registration. Never supply an App Check debug token in production.
 
-The workflow writes the two function parameters into
+The workflow writes the function parameters into
 `functions/.env.xenon-sentry-395319` for deployment. Keep `MAILTRAP_PASS` in
 Secret Manager; no GitHub secret with that value is needed. See
 [parameter configuration](https://firebase.google.com/docs/functions/config-env#parameterized_configuration).
+
+`FIREBASE_FUNCTIONS_APP_CHECK_DIAGNOSTICS_UNTIL` is an optional, normally absent
+environment variable for the bounded [App Check diagnostic](app-check-diagnostics.md).
+It is not needed for normal deployment. An absent value explicitly disables the
+diagnostic in the generated Functions parameter file.
 
 4. Under **Settings → Secrets and variables → Actions → Variables**, leave the
    **repository** variable `FIREBASE_DEPLOY_ENABLED` absent or `false` until the
