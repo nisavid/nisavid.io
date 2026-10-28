@@ -179,7 +179,7 @@ test("preserves a valid JSON contact request and consumes its App Check token", 
     {
       from: { name: data.name, email: environment.SENDER },
       to: [{ email: environment.TO }],
-      headers: { "Reply-To": `${data.name} <${data.email}>` },
+      headers: { "Reply-To": `"${data.name}" <${data.email}>` },
       subject: data.subject,
       text: data.body,
     },

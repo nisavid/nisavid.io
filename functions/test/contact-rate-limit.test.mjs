@@ -202,7 +202,7 @@ test("preserves a valid callable, CORS, and contact message", async () => {
     {
       from: { name: data.name, email: environment.SENDER },
       to: [{ email: environment.TO }],
-      headers: { "Reply-To": `${data.name} <${data.email}>` },
+      headers: { "Reply-To": `"${data.name}" <${data.email}>` },
       subject: data.subject,
       text: data.body,
     },

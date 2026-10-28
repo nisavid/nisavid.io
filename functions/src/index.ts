@@ -8,6 +8,7 @@ import * as Params from "firebase-functions/params";
 import { Mail, MailtrapClient } from "mailtrap";
 
 import { reserveContactEmail } from "./contactRateLimit";
+import { validateContactPayload } from "./contactPayload";
 
 Admin.initializeApp();
 
@@ -37,10 +38,7 @@ export const sendContactFormEmail = onCall(
       throw new HttpsError("unauthenticated", "App Check token already used.");
     }
 
-    const subject: unknown = request.data?.subject;
-    if (typeof subject !== "string") {
-      throw new HttpsError("invalid-argument", "Subject must be a string");
-    }
+    const data = validateContactPayload(request.data);
 
     // Reserve before constructing the transport. Keep the reservation even if
     // transport construction or delivery fails; retries are still attempts.
@@ -75,7 +73,7 @@ export const sendContactFormEmail = onCall(
     // whereas `Sender` identifies the sender (the authenticated agent
     // responsible for transmitting the message to the receiver).
     // In other words, according to the standards, we should set
-    // the `From` address to `request.data.email` and the `Sender` address
+    // the `From` address to `data.email` and the `Sender` address
     // to `sender.value()`.
     //
     // However, Mailtrap apparently ignores the `Sender` header and rejects
@@ -89,12 +87,13 @@ export const sendContactFormEmail = onCall(
     // the `Sender` altogether (because Mailtrap ignores it).  In order
     // to ensure that replies are addressed to the author rather than
     // to the sender, we include the author's name and address in `Reply-To`.
+    const replyToName = data.name.replace(/["\\]/g, "\\$&");
     const message: Mail = {
-      from: { name: request.data.name, email: sender.value() },
+      from: { name: data.name, email: sender.value() },
       to: [{ email: to.value() }],
-      headers: { "Reply-To": `${request.data.name} <${request.data.email}>` },
-      subject,
-      text: request.data.body,
+      headers: { "Reply-To": `"${replyToName}" <${data.email}>` },
+      subject: data.subject,
+      text: data.body,
     };
 
     try {
