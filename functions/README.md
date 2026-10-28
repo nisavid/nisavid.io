@@ -4,6 +4,17 @@
 format. App Check is required, limited-use tokens are consumed, and a token
 reported as already consumed is rejected before reserving capacity.
 
+The server validates the decoded payload before quota access, application logs,
+or transport construction. It requires exactly four own string fields: `name`
+(100 UTF-16 code units), `email` (254), `subject` (150), and `body` (1000),
+matching the browser's maxlengths. UTF-8 sizes are bounded at three times those
+limits so valid Unicode text remains usable. Malformed Unicode, blank fields,
+and control characters are rejected with `invalid-argument`; tabs and CR/LF are
+allowed in the message body. Accepted content is preserved without trimming.
+The email must be one ASCII mailbox with a dotted domain. The `Reply-To`
+display name is quoted and escaped; configured envelope addresses stay fixed.
+Invalid payloads do not reserve quota or construct a mail transport.
+
 Contact fields and message contents are sent to the configured mailbox, without
 being copied into application logs. Admitted attempts emit a generated
 `requestId` and a fixed `received`, `sent`, or `failed` outcome. Failures

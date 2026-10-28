@@ -306,11 +306,7 @@ test("SDK rejects a missing data envelope without injecting pre-auth metadata", 
   assertNoPrivateData();
 });
 
-for (const subject of [
-  "Hello, 世界",
-  "",
-  'Hello\r\n{"logging.googleapis.com/labels":{"forged":"yes"}}',
-]) {
+for (const subject of ["Hello, 世界"]) {
   test(`preserves string subject ${JSON.stringify(subject)}`, async () => {
     const response = await request({ data: { ...data, subject } });
     assert.equal(response.status, 200);
@@ -321,7 +317,7 @@ for (const subject of [
       {
         from: { name: data.name, email: environment.SENDER },
         to: [{ email: environment.TO }],
-        headers: { "Reply-To": `${data.name} <${data.email}>` },
+        headers: { "Reply-To": `"${data.name}" <${data.email}>` },
         subject,
         text: data.body,
       },
@@ -405,3 +401,25 @@ test("assigns an independent correlation ID to each request", async () => {
   const secondId = assertAttemptLogs(["received", "sent"])[0].requestId;
   assert.notEqual(firstId, secondId);
 });
+
+for (const subject of [
+  "",
+  " ",
+  'Hello\r\n{"logging.googleapis.com/labels":{"forged":"yes"}}',
+]) {
+  test(`rejects invalid text subject ${JSON.stringify(subject)} without logging it`, async () => {
+    const response = await request({ data: { ...data, subject } });
+    assert.equal(response.status, 400);
+    assert.equal((await response.json()).error.status, "INVALID_ARGUMENT");
+    assert.equal(transaction.mock.callCount(), 0);
+    assert.equal(send.mock.callCount(), 0);
+    assert.equal(
+      entries.filter((entry) => entry.severity === "INFO").length,
+      0,
+    );
+    assertNoInjectedMetadata();
+    assertNoPrivateData(
+      Object.values({ ...data, subject }).filter((value) => value.trim()),
+    );
+  });
+}
