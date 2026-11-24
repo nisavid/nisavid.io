@@ -2,9 +2,13 @@
 
 `.github/workflows/firebase-deploy.yml` builds and deploys Hosting and Functions
 from `main` to the existing Firebase project, `xenon-sentry-395319`. Deployment
-is disabled until the repository variable `FIREBASE_DEPLOY_ENABLED` is exactly
-`true`. The workflow also supports a manual run from `main` for initial
-verification and retries.
+runs only while the repository variable `FIREBASE_DEPLOY_ENABLED` is exactly
+`true`. It was set to `true` on 2026-10-28, so each merge to `main` deploys
+Hosting and Functions to production once validation passes, unless a newer
+commit is already on `main`. Because queued deployments can cancel one another,
+check the "Firebase deployment" run for the latest `main` commit; if it did not
+deploy (cancelled, failed, or skipped), run the workflow manually from `main`,
+which deploys too. A manual run also serves verification and retries.
 
 Authentication uses GitHub OIDC and Google Workload Identity Federation (WIF)
 through a dedicated deployment service account. There is no service-account JSON
@@ -215,13 +219,18 @@ verification.
 
 The October 19, 2026 operator handoff reports that
 `xenon-sentry-395319@appspot.gserviceaccount.com` retains project Editor and that
-the deployer has `actAs` on it. Together with permission to deploy Functions,
-this permits workloads to run with that account's broad privileges. Restricting
-the grant to one account does not make this configuration fully least-privileged,
-and a separate Token Creator grant is not needed for this path. Before
-activation, inventory the account's consumers and replace Editor with their
-required scoped roles, or explicitly review and accept this remaining access.
-Do not remove Editor blindly from an account that may serve existing workloads.
+the deployer has `actAs` on it. While Editor was held, together with permission
+to deploy Functions, this permitted workloads to run with that account's broad
+privileges, and restricting the grant to one account did not make the
+configuration fully least-privileged. A separate Token Creator grant is not
+needed for this path. A read-only check of the project's IAM policy on 2026-11-24 found that
+`xenon-sentry-395319@appspot.gserviceaccount.com` holds no project-level roles,
+Editor included, while the deployer still holds `actAs` on it. Inherited folder
+or organization roles were not checked, and when and by whom Editor was removed
+is not recorded. The handoff had called for the account's consumers to be
+inventoried and Editor replaced with their required scoped roles, or for the
+remaining access to be explicitly reviewed and accepted, before activation. Do
+not remove Editor blindly from an account that may serve existing workloads.
 
 The Secret Manager Viewer role permits metadata inspection, including the latest
 enabled version; it does not grant access to the token's payload. Grant the
@@ -338,9 +347,8 @@ environment variable for the bounded [App Check diagnostic](app-check-diagnostic
 It is not needed for normal deployment. An absent value explicitly disables the
 diagnostic in the generated Functions parameter file.
 
-4. Under **Settings → Secrets and variables → Actions → Variables**, leave the
-   **repository** variable `FIREBASE_DEPLOY_ENABLED` absent or `false` until the
-   rollout prerequisites below are complete. Set it to exactly `true` to enable
+4. Under **Settings → Secrets and variables → Actions → Variables**, set the
+   **repository** variable `FIREBASE_DEPLOY_ENABLED` to exactly `true` to enable
    production deployment. This gate belongs at repository level because job
    selection happens before environment variables are available.
 5. Review **Rules / branch protection** for `main`. Recommended protections are
@@ -433,7 +441,7 @@ The rate-limit fix adds `functions`' `test:emulator` script. When it is present,
 the required **Validate Firebase build** job also runs its real Firestore
 transaction and client-rule tests against `demo-contact-rate-limit`. It selects
 Temurin Java 21 and needs no production credentials. A failing emulator test
-fails validation even while production deployment remains disabled.
+fails validation, which blocks deployment.
 
 The reported Codex setup above predates these tests. For execution in Codex
 Security Cloud, additionally select Java 21 or newer and record `java --version`
@@ -503,6 +511,13 @@ Security Cloud.
 
 ## 6. Roll out and verify
 
+> **Historical record (list items 1–6 below).** They give the original rollout
+> order, which left `FIREBASE_DEPLOY_ENABLED` absent or `false` until its
+> prerequisites were complete, and its one-time verification. Do not read their
+> statements that deployment is disabled or gated as current status, or item 6's
+> contact-form test as a per-deployment step. List item 7 and the paragraphs
+> after the list describe current operation.
+
 1. Merge the workflow PR first, leaving `FIREBASE_DEPLOY_ENABLED` disabled.
    Production remains gated until the rollout prerequisites are complete.
 2. With lint configuration PR **#5** and cleanup PR **#6** merged, verify the
@@ -518,8 +533,9 @@ Security Cloud.
    remains disabled. Rerun the full validation sequence on the resulting `main`.
 4. Complete Google Cloud IAM/WIF and the GitHub environment configuration above.
    Confirm the function's actual build identity and Artifact Registry cleanup
-   policy; the operator handoff does not establish either. Review the legacy
-   App Engine Editor access described above. If adopting PR **#7**, also
+   policy; the operator handoff does not establish either. Confirm the legacy
+   App Engine account still holds no project-level roles, and check inherited
+   folder or organization roles. If adopting PR **#7**, also
    provision and verify its dedicated `contact-form` Firestore database, client
    deny rules, `CONTACT_RATE_LIMIT_SECRET`, and the database-conditioned runtime
    and secret-level runtime/deployer IAM grants in
