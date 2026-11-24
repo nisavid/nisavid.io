@@ -8,8 +8,10 @@ Firebase Hosting and Cloud Functions. See `README.md` and
 While the repository variable `FIREBASE_DEPLOY_ENABLED` is `true`, each push to
 `main` that passes validation deploys Hosting and Functions to production
 through the "Firebase deployment" workflow, unless a newer commit has superseded
-it on `main`. A manual run of that workflow from `main` deploys too. Weigh each
-merge as a production deploy. See `docs/firebase-deployment.md`.
+it on `main`. A manual run of that workflow from `main` deploys too. Queued
+deployments can cancel one another, so check the run for the latest `main`
+commit as `docs/firebase-deployment.md` describes. Weigh each merge as a
+production deploy. See `docs/firebase-deployment.md`.
 
 ## Agent skills
 
