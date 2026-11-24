@@ -41,16 +41,31 @@ empty `CONTACT_APP_CHECK_DIAGNOSTICS_UNTIL` runtime value in that case.
 After independent review and explicit authorization for a controlled diagnostic
 rollout, a canonical UTC ISO timestamp such as `YYYY-MM-DDTHH:mm:ss.sssZ` can be
 configured. It must be no more than one hour ahead. The runtime validates it at
-initialization and stops logging at the absolute deadline. Empty, malformed,
-expired, or initially excessive windows remain inactive. A window that expires
-during deployment produces no diagnostic evidence; it is not a reason to extend
-the deadline automatically.
+initialization and stops logging at the absolute deadline. At runtime, empty,
+malformed, expired, or initially excessive windows remain inactive. A window
+that expires during deployment produces no diagnostic evidence; it is not a
+reason to extend the deadline automatically.
 
-Adding the setting does not itself deploy code, bypass
-`FIREBASE_DEPLOY_ENABLED=false`, or authorize requests. Keep the deployment gate
-paused while this candidate is reviewed. A production rollout and any bounded
-acceptance check require their own concrete approval and remain outstanding. No
-new IAM grants or operator impersonation are required by this observer.
+Adding the setting does not itself deploy code or authorize requests. A merge to
+`main` deploys the observer's code (see
+[Firebase deployment](firebase-deployment.md)), which stays inactive while the
+setting is absent. The setting takes effect only through a deployment, so an
+authorized observation proceeds in this order:
+
+1. Choose a deadline at most one hour after the deployment's validation step
+   runs and late enough to cover the deployment and the authorized check. A
+   deadline that passes before the new revision serves produces no evidence.
+2. Set the variable, then run the deployment from `main`. Confirm from the run
+   summary that it deployed the intended commit: a run superseded by a newer
+   commit on `main` either succeeds without deploying or, if its deploy job was
+   still queued, is cancelled.
+3. Remove the setting after the observation, so later deployments do not carry
+   it forward.
+
+At deploy time the generator rejects a malformed value, or one more than an hour
+ahead, and that fails every deployment, including that of an unrelated merge,
+until the value is fixed or removed. Each step needs its own concrete approval.
+No new IAM grants or operator impersonation are required by this observer.
 
 ## Interpretation and cleanup
 
@@ -72,8 +87,8 @@ Preserve the completed mail-delivery, forwarding-attribution, and monitoring
 checks. Do not repeat them for this diagnostic. Cross-database denial remains a
 separate evidence limitation.
 
-Remove the optional GitHub setting after the authorized observation. The
-absolute expiry stops logging without another deployment. Remove the observer,
-its configuration plumbing, and diagnostic tests in the follow-up fix; retain
-only a regression test that exercises the established cause. Automatic
-deployment stays paused until the agreed acceptance work is satisfied.
+Remove the optional GitHub setting after the authorized observation, so later
+deployments do not carry it forward. The absolute expiry stops logging without
+another deployment. Remove the observer, its configuration plumbing, and
+diagnostic tests in the follow-up fix; retain only a regression test that
+exercises the established cause.

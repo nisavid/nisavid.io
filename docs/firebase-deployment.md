@@ -2,9 +2,11 @@
 
 `.github/workflows/firebase-deploy.yml` builds and deploys Hosting and Functions
 from `main` to the existing Firebase project, `xenon-sentry-395319`. Deployment
-is disabled until the repository variable `FIREBASE_DEPLOY_ENABLED` is exactly
-`true`. The workflow also supports a manual run from `main` for initial
-verification and retries.
+runs only while the repository variable `FIREBASE_DEPLOY_ENABLED` is exactly
+`true`. It was set to `true` on 2026-10-28, so each merge to `main` deploys
+Hosting and Functions to production, unless a newer commit is already on
+`main`. The workflow also supports a manual run from `main`, for verification
+and retries, which deploys too.
 
 Authentication uses GitHub OIDC and Google Workload Identity Federation (WIF)
 through a dedicated deployment service account. There is no service-account JSON
@@ -338,9 +340,8 @@ environment variable for the bounded [App Check diagnostic](app-check-diagnostic
 It is not needed for normal deployment. An absent value explicitly disables the
 diagnostic in the generated Functions parameter file.
 
-4. Under **Settings → Secrets and variables → Actions → Variables**, leave the
-   **repository** variable `FIREBASE_DEPLOY_ENABLED` absent or `false` until the
-   rollout prerequisites below are complete. Set it to exactly `true` to enable
+4. Under **Settings → Secrets and variables → Actions → Variables**, set the
+   **repository** variable `FIREBASE_DEPLOY_ENABLED` to exactly `true` to enable
    production deployment. This gate belongs at repository level because job
    selection happens before environment variables are available.
 5. Review **Rules / branch protection** for `main`. Recommended protections are
@@ -433,7 +434,7 @@ The rate-limit fix adds `functions`' `test:emulator` script. When it is present,
 the required **Validate Firebase build** job also runs its real Firestore
 transaction and client-rule tests against `demo-contact-rate-limit`. It selects
 Temurin Java 21 and needs no production credentials. A failing emulator test
-fails validation even while production deployment remains disabled.
+fails validation, which blocks deployment.
 
 The reported Codex setup above predates these tests. For execution in Codex
 Security Cloud, additionally select Java 21 or newer and record `java --version`
@@ -502,6 +503,13 @@ evidence; the operator handoff does not establish that these additions ran in
 Security Cloud.
 
 ## 6. Roll out and verify
+
+> **Historical record (list items 1–6 below).** They give the original rollout
+> order, which left `FIREBASE_DEPLOY_ENABLED` absent or `false` until its
+> prerequisites were complete, and its one-time verification. Do not read their
+> statements that deployment is disabled or gated as current status, or item 6's
+> contact-form test as a per-deployment step. List item 7 and the paragraphs
+> after the list describe current operation.
 
 1. Merge the workflow PR first, leaving `FIREBASE_DEPLOY_ENABLED` disabled.
    Production remains gated until the rollout prerequisites are complete.
