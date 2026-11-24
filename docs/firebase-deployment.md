@@ -5,8 +5,10 @@ from `main` to the existing Firebase project, `xenon-sentry-395319`. Deployment
 runs only while the repository variable `FIREBASE_DEPLOY_ENABLED` is exactly
 `true`. It was set to `true` on 2026-10-28, so each merge to `main` deploys
 Hosting and Functions to production once validation passes, unless a newer
-commit is already on `main`. The workflow also supports a manual run from
-`main`, for verification and retries, which deploys too.
+commit is already on `main`. Because queued deployments can cancel one another,
+check the "Firebase deployment" run for the latest `main` commit; if it did not
+deploy (cancelled, failed, or skipped), run the workflow manually from `main`,
+which deploys too. A manual run also serves verification and retries.
 
 Authentication uses GitHub OIDC and Google Workload Identity Federation (WIF)
 through a dedicated deployment service account. There is no service-account JSON
@@ -217,13 +219,18 @@ verification.
 
 The October 19, 2026 operator handoff reports that
 `xenon-sentry-395319@appspot.gserviceaccount.com` retains project Editor and that
-the deployer has `actAs` on it. Together with permission to deploy Functions,
-this permits workloads to run with that account's broad privileges. Restricting
-the grant to one account does not make this configuration fully least-privileged,
-and a separate Token Creator grant is not needed for this path. Before
-activation, inventory the account's consumers and replace Editor with their
-required scoped roles, or explicitly review and accept this remaining access.
-Do not remove Editor blindly from an account that may serve existing workloads.
+the deployer has `actAs` on it. While Editor was held, together with permission
+to deploy Functions, this permitted workloads to run with that account's broad
+privileges, and restricting the grant to one account did not make the
+configuration fully least-privileged. A separate Token Creator grant is not
+needed for this path. A read-only check of the project's IAM policy on 2026-11-24 found that
+`xenon-sentry-395319@appspot.gserviceaccount.com` holds no project-level roles,
+Editor included, while the deployer still holds `actAs` on it. Inherited folder
+or organization roles were not checked, and when and by whom Editor was removed
+is not recorded. The handoff had called for the account's consumers to be
+inventoried and Editor replaced with their required scoped roles, or for the
+remaining access to be explicitly reviewed and accepted, before activation. Do
+not remove Editor blindly from an account that may serve existing workloads.
 
 The Secret Manager Viewer role permits metadata inspection, including the latest
 enabled version; it does not grant access to the token's payload. Grant the
@@ -526,8 +533,9 @@ Security Cloud.
    remains disabled. Rerun the full validation sequence on the resulting `main`.
 4. Complete Google Cloud IAM/WIF and the GitHub environment configuration above.
    Confirm the function's actual build identity and Artifact Registry cleanup
-   policy; the operator handoff does not establish either. Review the legacy
-   App Engine Editor access described above. If adopting PR **#7**, also
+   policy; the operator handoff does not establish either. Confirm the legacy
+   App Engine account still holds no project-level roles, and check inherited
+   folder or organization roles. If adopting PR **#7**, also
    provision and verify its dedicated `contact-form` Firestore database, client
    deny rules, `CONTACT_RATE_LIMIT_SECRET`, and the database-conditioned runtime
    and secret-level runtime/deployer IAM grants in
