@@ -59,8 +59,8 @@ authorized observation proceeds in this order:
    summary that it deployed the intended commit: a run superseded by a newer
    commit on `main` either succeeds without deploying or, if its deploy job was
    still queued, is cancelled.
-3. Remove the setting after the observation, so later deployments do not carry
-   it forward.
+3. Remove the setting after the observation, or as soon as the attempt is
+   abandoned, so later deployments do not carry it forward.
 
 At deploy time the generator rejects a malformed value, or one more than an hour
 ahead, and that fails every deployment, including that of an unrelated merge,

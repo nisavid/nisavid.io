@@ -4,9 +4,9 @@
 from `main` to the existing Firebase project, `xenon-sentry-395319`. Deployment
 runs only while the repository variable `FIREBASE_DEPLOY_ENABLED` is exactly
 `true`. It was set to `true` on 2026-10-28, so each merge to `main` deploys
-Hosting and Functions to production, unless a newer commit is already on
-`main`. The workflow also supports a manual run from `main`, for verification
-and retries, which deploys too.
+Hosting and Functions to production once validation passes, unless a newer
+commit is already on `main`. The workflow also supports a manual run from
+`main`, for verification and retries, which deploys too.
 
 Authentication uses GitHub OIDC and Google Workload Identity Federation (WIF)
 through a dedicated deployment service account. There is no service-account JSON
