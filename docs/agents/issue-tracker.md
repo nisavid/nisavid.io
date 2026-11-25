@@ -140,10 +140,13 @@ including `wayfinder:map`, as under **Create a label**.
   blocker state excludes a child. Compare states case-insensitively: the REST
   calls return `open`/`closed`, and `gh issue view` returns `OPEN`/`CLOSED`. To
   read it:
-  - children with their state and assignees:
-    `gh api --paginate repos/nisavid/nisavid.io/issues/<map>/sub_issues --jq '.[] | {number, state, assignees: [.assignees[].login]}'`;
-    without sub-issues, use the task list in the map body, then read each
-    child's state and assignees as under **Read an issue**;
+  - children with their repository, state, and assignees:
+    `gh api --paginate repos/nisavid/nisavid.io/issues/<map>/sub_issues --jq '.[] | {number, repository_url, state, assignees: [.assignees[].login]}'`,
+    excluding any child whose `repository_url` is not
+    `https://api.github.com/repos/nisavid/nisavid.io`, since the commands below
+    address children by number in this repository; without sub-issues, use the
+    task list in the map body, then read each child's state and assignees as
+    under **Read an issue**;
   - each child's native blockers with their state:
     `gh api --paginate repos/nisavid/nisavid.io/issues/<n>/dependencies/blocked_by --jq '.[] | {number, state}'`;
   - each child's `Blocked by:` line, from `gh issue view <n> --json body`, then
