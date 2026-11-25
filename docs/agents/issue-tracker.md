@@ -48,12 +48,12 @@ a separate Linear issue.
 ### Conventions
 
 - **Create an issue**: `gh issue create --title "..." --body "..."`, with a
-  heredoc for multi-line bodies. The creating agent applies `needs-triage`
-  unless the task supplies the triage outcome.
+  heredoc for multi-line bodies. The creating agent applies the starting state
+  label that `triage-labels.md` sets.
 - **Read an issue**:
-  `gh issue view <number> --json number,title,body,labels,comments`.
+  `gh issue view <number> --json number,title,state,assignees,body,labels,comments`.
 - **List issues**:
-  `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'`,
+  `gh issue list --state open --limit 200 --json number,title,state,assignees,body,labels,comments --jq '[.[] | {number, title, state, assignees: [.assignees[].login], body, labels: [.labels[].name], comments: [.comments[].body]}]'`,
   with `--label` and `--state` filters as needed.
 - **Database id of an issue** (for the REST calls below):
   `gh api repos/nisavid/nisavid.io/issues/<n> --jq .id`.
@@ -70,6 +70,9 @@ a separate Linear issue.
   body. Whether a ticket is startable is decided by the Frontier rule under
   Wayfinding operations.
 - **Comment**: `gh issue comment <number> --body "..."`.
+- **Create a label**: before first applying a label the repository lacks, run
+  `gh label create "<name>"`. List existing labels with
+  `gh label list --limit 200`.
 - **Apply or remove labels**: `gh issue edit <number> --add-label "..."` or
   `--remove-label "..."`.
 - **Close**: post the explanation with `gh issue comment`, then run
@@ -123,8 +126,8 @@ A map is a GitHub issue labelled `wayfinder:map`. Its decision tickets are
 native sub-issues, each labelled with its one applicable type:
 `wayfinder:research`, `wayfinder:prototype`, `wayfinder:grilling`,
 `wayfinder:task`, or `wayfinder:probing`. Use `wayfinder:probing` when the
-observation itself resolves the ticket. Create missing labels in GitHub with
-those exact names.
+observation itself resolves the ticket. Create any missing `wayfinder:*` label,
+including `wayfinder:map`, as under **Create a label**.
 
 - **Map**: one issue labelled `wayfinder:map`, holding the Notes, Decisions so
   far, and Fog body.
@@ -134,7 +137,20 @@ those exact names.
 - **Frontier**: the map's open, unassigned children, in map order, whose every
   blocker is observed closed. Blockers are the native dependencies plus any
   `Blocked by:` line. An open blocker, an unresolved reference, or unknown
-  blocker state excludes a child.
+  blocker state excludes a child. Compare states case-insensitively: the REST
+  calls return `open`/`closed`, and `gh issue view` returns `OPEN`/`CLOSED`. To
+  read it:
+  - children with their repository, state, and assignees:
+    `gh api --paginate repos/nisavid/nisavid.io/issues/<map>/sub_issues --jq '.[] | {number, repository_url, state, assignees: [.assignees[].login]}'`,
+    excluding any child whose `repository_url` is not
+    `https://api.github.com/repos/nisavid/nisavid.io`, since the commands below
+    address children by number in this repository; without sub-issues, use the
+    task list in the map body, then read each child's state and assignees as
+    under **Read an issue**;
+  - each child's native blockers with their state:
+    `gh api --paginate repos/nisavid/nisavid.io/issues/<n>/dependencies/blocked_by --jq '.[] | {number, state}'`;
+  - each child's `Blocked by:` line, from `gh issue view <n> --json body`, then
+    each listed issue's state with `gh issue view <m> --json state`.
 - **Claim**: `gh issue edit <n> --add-assignee @me`, the session's first write.
   Reread the claim and blockers afterwards.
 - **Resolve**: post the answer as a resolution comment, close the issue, then
