@@ -140,12 +140,13 @@ including `wayfinder:map`, as under **Create a label**.
   blocker state excludes a child. A reference in the task list or a
   `Blocked by:` line belongs to this repository only if it is a bare `#<n>`,
   `nisavid/nisavid.io#<n>`, or
-  `https://github.com/nisavid/nisavid.io/issues/<n>`. Ignore case when matching
-  the owner and repository names. Treat every other reference as unresolved.
-  Read only resolved references, by number if bare or by full issue URL if
-  qualified. Use a native dependency for a blocker in another repository.
-  Compare states case-insensitively: the REST calls return `open`/`closed`, and
-  `gh issue view` returns `OPEN`/`CLOSED`. To read it:
+  `https://github.com/nisavid/nisavid.io/issues/<n>`. Match issue URLs by origin
+  and path. Ignore case when matching the owner and repository names. Treat
+  every other reference as unresolved. Read only resolved references, by number
+  if bare or by canonical issue URL if qualified. Use a native dependency for a
+  blocker in another repository. Compare states case-insensitively: the REST
+  calls return `open`/`closed`, and `gh issue view` returns `OPEN`/`CLOSED`. To
+  read it:
   - children with their repository, state, and assignees:
     `gh api --paginate repos/nisavid/nisavid.io/issues/<map>/sub_issues --jq '.[] | {number, repository_url, state, assignees: [.assignees[].login]}'`,
     excluding any child whose `repository_url` is not
@@ -153,7 +154,8 @@ including `wayfinder:map`, as under **Create a label**.
     address children by number in this repository; without sub-issues, use the
     task list in the map body, excluding unresolved items from the children to
     read, claim, or close. Read each resolved child's state and assignees with
-    the fields under **Read an issue**;
+    the fields under **Read an issue**. Use the returned `number` for later
+    commands on that child;
   - each child's native blockers with their state:
     `gh api --paginate repos/nisavid/nisavid.io/issues/<n>/dependencies/blocked_by --jq '.[] | {number, state}'`;
   - each child's `Blocked by:` line, from `gh issue view <n> --json body`, then
