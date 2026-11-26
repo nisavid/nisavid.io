@@ -137,7 +137,14 @@ including `wayfinder:map`, as under **Create a label**.
 - **Frontier**: the map's open, unassigned children, in map order, whose every
   blocker is observed closed. Blockers are the native dependencies plus any
   `Blocked by:` line. An open blocker, an unresolved reference, or unknown
-  blocker state excludes a child. Compare states case-insensitively: the REST
+  blocker state excludes a child. A reference in the task list or a
+  `Blocked by:` line belongs to this repository only if it is a bare `#<n>`,
+  `nisavid/nisavid.io#<n>`, or
+  `https://github.com/nisavid/nisavid.io/issues/<n>`. Match issue URLs by origin
+  and path. Ignore case when matching the owner and repository names. Treat
+  every other reference as unresolved. Read only resolved references, by number
+  if bare or by canonical issue URL if qualified. Use a native dependency for a
+  blocker in another repository. Compare states case-insensitively: the REST
   calls return `open`/`closed`, and `gh issue view` returns `OPEN`/`CLOSED`. To
   read it:
   - children with their repository, state, and assignees:
@@ -145,12 +152,14 @@ including `wayfinder:map`, as under **Create a label**.
     excluding any child whose `repository_url` is not
     `https://api.github.com/repos/nisavid/nisavid.io`, since the commands below
     address children by number in this repository; without sub-issues, use the
-    task list in the map body, then read each child's state and assignees as
-    under **Read an issue**;
+    task list in the map body, excluding unresolved items from the children to
+    read, claim, or close. Read each resolved child's state and assignees with
+    the fields under **Read an issue**. Use the returned `number` for later
+    commands on that child;
   - each child's native blockers with their state:
     `gh api --paginate repos/nisavid/nisavid.io/issues/<n>/dependencies/blocked_by --jq '.[] | {number, state}'`;
   - each child's `Blocked by:` line, from `gh issue view <n> --json body`, then
-    each listed issue's state with `gh issue view <m> --json state`.
+    each resolved issue's state with `gh issue view <ref> --json state`.
 - **Claim**: `gh issue edit <n> --add-assignee @me`, the session's first write.
   Reread the claim and blockers afterwards.
 - **Resolve**: post the answer as a resolution comment, close the issue, then
