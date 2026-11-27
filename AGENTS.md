@@ -1,6 +1,6 @@
 # nisavid.io agent instructions
 
-This repository is its owner's personal site: an Elm single-page application
+This repository is Ivan D Vasin's personal site: an Elm single-page application
 with TypeScript, styled with Tailwind CSS, built with Parcel, and deployed to
 Firebase Hosting and Cloud Functions. See `README.md` and
 `docs/firebase-deployment.md`.
